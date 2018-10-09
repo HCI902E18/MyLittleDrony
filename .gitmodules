@@ -1,3 +1,6 @@
 [submodule "inputz"]
 	path = inputz
 	url = https://github.com/HCI902E18/inputz.git
+[submodule "pyparrot"]
+	path = pyparrot
+	url = https://github.com/HCI902E18/pyparrot
