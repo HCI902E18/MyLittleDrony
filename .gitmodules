@@ -1,0 +1,3 @@
+[submodule "inputz"]
+	path = inputz
+	url = https://github.com/HCI902E18/inputz.git
