@@ -1,2 +1,5 @@
+-e git://github.com/HCI902E18/pyparrot.git#egg=pyparrot
+-e git://github.com/HCI902E18/inputz#egg=inputz
+
 untangle
 zeroconf
