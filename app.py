@@ -40,8 +40,9 @@ class DroneTest(object):
 
     def tick(self):
         while True:
-            print("TICK")
             start_time = time.time()
+
+            print(self._movement_vector)
 
             if self.state == self.State.flying:
                 self.bebop.fly_direct(**self._movement_vector, duration=self._tick_rate)
@@ -55,8 +56,13 @@ class DroneTest(object):
                 print("ERROR TICK TO LONK")
 
     def start(self):
+        self.thread.start()
+
+        return
         success = self.bebop.connect(10)
         if success:
+            self.thread.start()
+        else:
             self.thread.start()
 
     @d.listen(c.binding('takeoff'))
@@ -64,40 +70,32 @@ class DroneTest(object):
         if self.state == self.State.stand_still and args:
             self.state = self.State.takeoff
 
-            success = self.bebop.safe_takeoff(5)
-
-            if success:
-                self.state = self.State.flying
-            else:
-                self.state = self.State.stand_still
+            self.bebop.safe_takeoff(5)
+            self.state = self.State.flying
 
     @d.listen(c.binding('landing'))
     def land(self, args):
         if self.state == self.State.flying and args:
             self.state = self.State.landing
 
-            success = self.bebop.safe_land(5)
-
-            if success:
-                self.state = self.State.stand_still
-            else:
-                self.state = self.State.flying
+            self.bebop.safe_land(5)
+            self.state = self.State.stand_still
 
     @d.listen(c.binding('pitch'))
     def pitch(self, args):
-        print('pitch')
+        self._movement_vector['pitch'] = args[1] * self.max_pitch
 
     @d.listen(c.binding('roll'))
     def roll(self, args):
-        print('roll')
+        self._movement_vector['roll'] = args[0] * self.max_roll
 
     @d.listen(c.binding('yaw'))
     def yaw(self, args):
-        print('yaw')
+        self._movement_vector['yaw'] = args[0] * self.max_yaw
 
     @d.listen(c.binding('altitude_modifier'))
     def altitude(self, args):
-        print('altitude')
+        self._movement_vector['vertical_movement'] = args[1] * self.max_vertical_movement
 
     @d.listen(c.binding('take_picture'))
     def picture(self, args):
