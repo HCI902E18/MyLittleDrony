@@ -7,8 +7,6 @@ from pyparrot.Bebop import Bebop
 
 from Config import c
 
-d = Devices().get_device()
-
 
 class DroneTest(object):
     def __init__(self):
@@ -31,15 +29,17 @@ class DroneTest(object):
 
         self.thread = Thread(name='Drone', target=self.tick, args=(()))
 
-        d.method_listener(self.take_off, c.binding('takeoff'))
-        d.method_listener(self.land, c.binding('landing'))
-        d.method_listener(self.pitch, c.binding('pitch'))
-        d.method_listener(self.roll, c.binding('roll'))
-        d.method_listener(self.yaw, c.binding('yaw'))
-        d.method_listener(self.altitude, c.binding('altitude_modifier'))
-        d.method_listener(self.picture, c.binding('take_picture'))
-        d.method_listener(self.video, [c.binding('start_video'), c.binding('stop_video')])
-        d.method_listener(self.gimbal, [c.binding('gimbal_vertical'), c.binding('gimbal_horizontal')])
+        self.device = Devices().get_device()
+
+        self.device.method_listener(self.take_off, c.binding('takeoff'))
+        self.device.method_listener(self.land, c.binding('landing'))
+        self.device.method_listener(self.pitch, c.binding('pitch'))
+        self.device.method_listener(self.roll, c.binding('roll'))
+        self.device.method_listener(self.yaw, c.binding('yaw'))
+        self.device.method_listener(self.altitude, c.binding('altitude_modifier'))
+        self.device.method_listener(self.picture, c.binding('take_picture'))
+        self.device.method_listener(self.video, [c.binding('start_video'), c.binding('stop_video')])
+        self.device.method_listener(self.gimbal, [c.binding('gimbal_vertical'), c.binding('gimbal_horizontal')])
 
     class State(enum.Enum):
         deed = 'deed'
@@ -64,10 +64,11 @@ class DroneTest(object):
                 print("ERROR TICK TO LONK")
 
     def start(self):
-        self.thread.start()
-        return
+        self.device.start()
+
         success = self.bebop.connect(10)
         if success:
+            self.state = self.State.stand_still
             self.thread.start()
 
     def take_off(self, args):
@@ -85,16 +86,16 @@ class DroneTest(object):
             self.state = self.State.stand_still
 
     def pitch(self, args):
-        self._movement_vector['pitch'] = args[1] * self.max_pitch
+        self._movement_vector['pitch'] = int(args[1] * self.max_pitch)
 
     def roll(self, args):
-        self._movement_vector['roll'] = args[0] * self.max_roll
+        self._movement_vector['roll'] = int(args[0] * self.max_roll)
 
     def yaw(self, args):
-        self._movement_vector['yaw'] = args[0] * self.max_yaw
+        self._movement_vector['yaw'] = int(args[0] * self.max_yaw)
 
     def altitude(self, args):
-        self._movement_vector['vertical_movement'] = args[1] * self.max_vertical_movement
+        self._movement_vector['vertical_movement'] = int(args[1] * self.max_vertical_movement)
 
     def picture(self, args):
         print('picture')
@@ -107,6 +108,4 @@ class DroneTest(object):
 
 
 if __name__ == '__main__':
-    drone = DroneTest()
-    drone.start()
-    d.start()
+    DroneTest().start()
