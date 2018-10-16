@@ -22,9 +22,12 @@ class DroneTest(object):
 
         self.exec_time = []
         self.logs = []
+        self.func_sates = {}
 
         self.state = self.State.deed
-        self._tick_rate = 0.1
+        self.flying = False
+
+        self._tick_rate = 0.25
         self._movement_vector = {
             'roll': 0,
             'pitch': 0,
@@ -46,10 +49,9 @@ class DroneTest(object):
         self.device.method_listener(self.video, [c.binding('start_video'), c.binding('stop_video')])
         self.device.method_listener(self.gimbal, [c.binding('gimbal_vertical'), c.binding('gimbal_horizontal')])
 
-        self.device.method_listener(self.do_flip_right, c.binding('barrel_roll_right'))
-        self.device.method_listener(self.do_flip_left, c.binding('barrel_roll_left'))
-
         self.device.method_listener(self.change_profile, c.binding('profile_change'))
+
+        self.device.abort_function(self.abort)
 
         self.default_profile = 'Default'
         self.profiles = []
@@ -59,12 +61,11 @@ class DroneTest(object):
         self.load_profiles()
         self.choose_profile()
 
+        self.i = 0
+
     class State(enum.Enum):
         deed = 'deed'
-        stand_still = 'stand_still'
-        takeoff = 'takeoff'
-        flying = 'flying'
-        landing = 'landing'
+        not_deed = 'not_deed'
 
     def load_profiles(self):
         files = glob.glob('./profiles/*.json')
@@ -87,6 +88,7 @@ class DroneTest(object):
         if self.state != self.State.deed:
             profile = self.profiles[idx]
 
+            self.bebop.enable_geofence(True)
             self.bebop.set_max_altitude(profile.get('max_altitude'))
             self.bebop.set_max_distance(profile.get('max_distance'))
             self.bebop.set_max_tilt(profile.get('max_tilt'))
@@ -100,8 +102,8 @@ class DroneTest(object):
         while True:
             start_time = time.time()
 
-            print(self.bebop.sensors.flying_state)
-            if self.state == self.State.flying:
+            # print(self.bebop.sensors.flying_state)
+            if self.state != self.State.deed:
                 self.bebop.fly_direct(**self._movement_vector, duration=self._tick_rate)
 
             sleep_time = self._tick_rate - (time.time() - start_time)
@@ -116,10 +118,19 @@ class DroneTest(object):
 
     def log(self, exec_time):
         self.exec_time.append(exec_time)
-        self.logs.append(self.bebop.sensors.sensors_dict)
+
+        with open('logs/exec_times.json', 'w') as f:
+            f.write(json.dumps(self.exec_time))
+
+        with open(f'logs/flight_log_{self.i}.json', 'w') as f:
+            f.write(json.dumps({k: v for k, v in self.bebop.sensors.sensors_dict.items()}))
+
+        self.i += 1
 
     def start(self):
         self.device.start()
+
+        return
 
         success = self.bebop.connect(10)
         if success:
@@ -127,28 +138,28 @@ class DroneTest(object):
 
             self.load_profile(self.profile_idx)
 
-            self.state = self.State.stand_still
+            self.state = self.State.not_deed
             self.thread.start()
 
     def take_off(self, args):
-        if self.state == self.State.stand_still and args:
-            self.state = self.State.takeoff
+        state = "take_off_and_landing"
+
+        if args and self.state == self.State.not_deed and not self.flying and state not in self.func_sates:
+            self.func_sates[state] = True
 
             self.bebop.safe_takeoff(5)
-            self.state = self.State.flying
+
+            del self.func_sates[state]
 
     def land(self, args):
-        if self.state == self.State.flying and args:
-            self.state = self.State.landing
+        state = "take_off_and_landing"
+
+        if args and self.state == self.State.not_deed and self.flying and state not in self.func_sates:
+            self.func_sates[state] = True
 
             self.bebop.safe_land(5)
-            self.state = self.State.stand_still
 
-            with open('exec_times.json', 'w') as f:
-                f.write(json.dumps(self.exec_time))
-
-            with open('flight_log.json', 'w') as f:
-                f.write(json.dumps(self.logs))
+            del self.func_sates[state]
 
     def pitch(self, args):
         self._movement_vector['pitch'] = int(args[1] * self.max_pitch)
@@ -171,16 +182,6 @@ class DroneTest(object):
     def gimbal(self, args):
         print('gimbal')
 
-    def do_flip_right(self, args):
-        if self.state == self.State.flying and args:
-            self.bebop.flip(direction="right")
-            self.bebop.smart_sleep(5)
-
-    def do_flip_left(self, args):
-        if self.state == self.State.flying and args:
-            self.bebop.flip(direction="left")
-            self.bebop.smart_sleep(5)
-
     def change_profile(self, args):
         if args and not self.profile_loading:
             self.profile_loading = True
@@ -191,3 +192,6 @@ class DroneTest(object):
             self.profile_loading = False
 
         return
+
+    def abort(self):
+        self.bebop.emergency_land()
