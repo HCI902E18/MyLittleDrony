@@ -35,7 +35,10 @@ class DroneTest(object):
             'vertical_movement': 0,
         }
 
-        self.thread = Thread(name='Drone', target=self.tick, args=(()))
+        self.threads = [
+            Thread(name='Drone', target=self.tick, args=(())),
+            Thread(name='Watchdog', target=self.watchdog, args=(()))
+        ]
 
         self.device = Devices().get_device()
 
@@ -45,9 +48,9 @@ class DroneTest(object):
         self.device.method_listener(self.roll, c.binding('roll'))
         self.device.method_listener(self.yaw, c.binding('yaw'))
         self.device.method_listener(self.altitude, c.binding('altitude_modifier'))
-        self.device.method_listener(self.picture, c.binding('take_picture'))
-        self.device.method_listener(self.video, [c.binding('start_video'), c.binding('stop_video')])
-        self.device.method_listener(self.gimbal, [c.binding('gimbal_vertical'), c.binding('gimbal_horizontal')])
+        # self.device.method_listener(self.picture, c.binding('take_picture'))
+        # self.device.method_listener(self.video, [c.binding('start_video'), c.binding('stop_video')])
+        # self.device.method_listener(self.gimbal, [c.binding('gimbal_vertical'), c.binding('gimbal_horizontal')])
 
         self.device.method_listener(self.change_profile, c.binding('profile_change'))
 
@@ -98,11 +101,15 @@ class DroneTest(object):
 
         return
 
+    def watchdog(self):
+        # Used for keeping the drones connection alive
+        while True:
+            print(self.bebop.sensors.flying_state)
+
     def tick(self):
         while True:
             start_time = time.time()
 
-            # print(self.bebop.sensors.flying_state)
             if self.state != self.State.deed:
                 self.bebop.fly_direct(**self._movement_vector, duration=self._tick_rate)
 
@@ -130,16 +137,14 @@ class DroneTest(object):
     def start(self):
         self.device.start()
 
-        return
-
         success = self.bebop.connect(10)
         if success:
-            # self.bebop.start_video_stream()
-
             self.load_profile(self.profile_idx)
 
             self.state = self.State.not_deed
-            self.thread.start()
+
+            for thread in self.threads:
+                thread.start()
 
     def take_off(self, args):
         state = "take_off_and_landing"
@@ -162,25 +167,16 @@ class DroneTest(object):
             del self.func_sates[state]
 
     def pitch(self, args):
-        self._movement_vector['pitch'] = int(args[1] * self.max_pitch)
+        self._movement_vector['pitch'] = self.round(args[1] * self.max_pitch)
 
     def roll(self, args):
-        self._movement_vector['roll'] = int(args[0] * self.max_roll)
+        self._movement_vector['roll'] = self.round(args[0] * self.max_roll)
 
     def altitude(self, args):
-        self._movement_vector['vertical_movement'] = int(args[1] * self.max_vertical_movement)
+        self._movement_vector['vertical_movement'] = self.round(args[1] * self.max_vertical_movement)
 
     def yaw(self, args):
-        self._movement_vector['yaw'] = int(args[0] * self.max_yaw)
-
-    def picture(self, args):
-        print('picture')
-
-    def video(self, args):
-        print('video')
-
-    def gimbal(self, args):
-        print('gimbal')
+        self._movement_vector['yaw'] = self.round(args[0] * self.max_yaw)
 
     def change_profile(self, args):
         if args and not self.profile_loading:
@@ -193,5 +189,14 @@ class DroneTest(object):
 
         return
 
+    def round(self, value):
+        return int(round(value))
+
     def abort(self):
+        for k, _ in self._movement_vector.items():
+            self._movement_vector[k] = 0
+
         self.bebop.emergency_land()
+
+        for thread in self.threads:
+            thread.join()
