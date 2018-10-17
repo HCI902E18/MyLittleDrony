@@ -64,6 +64,8 @@ class DroneTest(object):
         self.load_profiles()
         self.choose_profile()
 
+        self.running = True
+
         self.i = 0
 
     class State(enum.Enum):
@@ -103,19 +105,17 @@ class DroneTest(object):
 
     def watchdog(self):
         # Used for keeping the drones connection alive
-        while True:
+        while self.running:
             print(self.bebop.sensors.flying_state)
 
     def tick(self):
-        while True:
+        while self.running:
             start_time = time.time()
 
             if self.state != self.State.deed:
                 self.bebop.fly_direct(**self._movement_vector, duration=self._tick_rate)
 
-            sleep_time = self._tick_rate - (time.time() - start_time)
-
-            self.log((time.time() - start_time))
+            sleep_time = self._tick_rate - self.log(time.time() - start_time)
 
             # Handle too slow calculations
             if sleep_time > 0:
@@ -133,6 +133,8 @@ class DroneTest(object):
             f.write(json.dumps({k: v for k, v in self.bebop.sensors.sensors_dict.items()}))
 
         self.i += 1
+
+        return exec_time
 
     def start(self):
         self.device.start()
@@ -197,6 +199,8 @@ class DroneTest(object):
             self._movement_vector[k] = 0
 
         self.bebop.emergency_land()
+
+        self.running = False
 
         for thread in self.threads:
             thread.join()
