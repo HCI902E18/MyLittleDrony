@@ -10,8 +10,9 @@ from threading import Thread
 from inputz import Devices
 
 from Config import c
-from Logging import Logging
 from bebop.Bebop import Bebop
+from log.LogUtils import LogUtils
+from log.Logging import Logging
 
 
 class DroneTest(Logging):
@@ -103,7 +104,7 @@ class DroneTest(Logging):
                 self.profile_idx = idx
 
     def load_profile(self, idx):
-        self.log_info(f"Loading profile: {self.profiles[idx]['name']}")
+        self.log.info(f"Loading profile: {self.profiles[idx]['name']}")
         if self.state != self.DroneStates.unknown:
             profile = self.profiles[idx]
 
@@ -116,14 +117,18 @@ class DroneTest(Logging):
             self.bebop.set_max_rotation_speed(profile.get('max_rotation_speed'))
 
     def watchdog(self):
+        lu = LogUtils()
+
         # Used for keeping the drones connection alive
         while self.running:
             self.state = self.DroneStates[self.bebop.sensors.flying_state]
-            self.log_debug(self.state)
 
             self.bebop.ask_for_state_update()
-
             self.bebop.smart_sleep(1)
+
+            self.logs.append(lu.parse_sensors(self.bebop.sensors.sensors_dict))
+
+            self.write_log()
 
     def tick(self):
         null_vector = deepcopy(self._movement_vector)
@@ -134,13 +139,7 @@ class DroneTest(Logging):
                 if self._movement_vector != null_vector:
                     self.bebop.fly_direct(**self._movement_vector, duration=self._tick_rate)
 
-            sleep_time = self._tick_rate - self.log(time.time() - start_time)
-
-            # Handle too slow calculations
-            # if sleep_time > 0:
-            #     self.bebop.smart_sleep(sleep_time)
-            # else:
-            #     print("ERROR TICK TO LONK", sleep_time, self._tick_rate)
+            self.exec_time.append(time.time() - start_time)
 
     @staticmethod
     def parse(val_):
@@ -151,23 +150,17 @@ class DroneTest(Logging):
                 return f"INVALID_DATA: {str(val_)}"
         return val_
 
-    def log(self, exec_time):
-        self.exec_time.append(exec_time)
-
+    def write_log(self):
         with open('logs/exec_times.json', 'w') as f:
-            f.write(json.dumps(self.exec_time))
+            f.write(json.dumps(self.exec_time, indent=4))
 
-        with open(f'logs/flight_log_{self.i}.json', 'w') as f:
-            f.write(json.dumps({k: self.parse(v) for k, v in self.bebop.sensors.sensors_dict.items()}, indent=4))
-
-        self.i += 1
-
-        return exec_time
+        with open(f'logs/flight_log.json', 'w') as f:
+            f.write(json.dumps(self.logs, indent=4))
 
     def start(self):
         try:
             if self.bebop.connect(5):
-                self.log_info("Successfully connected to the drone")
+                self.log.info("Successfully connected to the drone")
 
                 self.device.start()
 
@@ -176,10 +169,10 @@ class DroneTest(Logging):
                 for thread in self.threads:
                     thread.start()
             else:
-                self.log_error("Could not connect to drone")
+                self.log.error("Could not connect to drone")
                 exit(1)
         except ConnectionRefusedError:
-            self.log_error("The drone did actively refuse the connection")
+            self.log.error("The drone did actively refuse the connection")
             exit(1)
 
     def take_off(self, args):
@@ -222,6 +215,7 @@ class DroneTest(Logging):
             self._movement_vector[k] = 0
 
         self.bebop.emergency_land()
+        self.bebop.disconnect()
 
         self.running = False
 

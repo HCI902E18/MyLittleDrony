@@ -4,7 +4,7 @@ from time import sleep
 
 from pyparrot.networking.wifiConnection import WifiConnection as BaseWifiConnection
 
-from Logging import Logging
+from log.Logging import Logging
 
 
 class WifiConnection(BaseWifiConnection, Logging):
@@ -24,14 +24,14 @@ class WifiConnection(BaseWifiConnection, Logging):
             except socket.timeout:
                 self.handle_timeout()
             except Exception as e:
-                self.log_error(f"ERROR!: {str(e)}")
+                self.log.error(f"ERROR!: {str(e)}")
 
             self.handle_data(data)
         self.disconnect()
 
     def handle_timeout(self):
         if self.timeout_count < 2:
-            self.log_debug("TIMEOUT")
+            self.log.debug("TIMEOUT")
             self.timeout_count += 1
             return
 
@@ -59,5 +59,5 @@ class WifiConnection(BaseWifiConnection, Logging):
                         # Handle connection errors
             except (ConnectionAbortedError, OSError):
                 # Wait for a duration
-                self.log_warn(f"Retrying in {self.reconnect_sleep} sec")
+                self.log.warning(f"Retrying in {self.reconnect_sleep} sec")
                 sleep(self.reconnect_sleep)
