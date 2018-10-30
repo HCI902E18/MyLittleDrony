@@ -139,7 +139,10 @@ class DroneTest(Logging):
                 if self._movement_vector != null_vector:
                     self.bebop.fly_direct(**self._movement_vector, duration=self._tick_rate)
 
-            self.exec_time.append(time.time() - start_time)
+            exec_time = time.time() - start_time
+            if self.state in [self.DroneStates.flying, self.DroneStates.hovering]:
+                self.exec_time.append(exec_time)
+                self.bebop.smart_sleep(self._tick_rate)
 
     @staticmethod
     def parse(val_):
