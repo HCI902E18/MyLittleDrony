@@ -15,7 +15,6 @@ from inputz import Devices
 
 from Config import c
 from bebop.Bebop import Bebop
-from bebop.DummyBebop import DummyBebop
 from log.LogUtils import LogUtils
 from log.Logging import Logging
 
@@ -132,7 +131,6 @@ class DroneTest(Logging):
             self.state = self.DroneStates[self.bebop.sensors.flying_state]
 
             self.bebop.ask_for_state_update()
-            # self.bebop.smart_sleep(1)
 
             self.logs.append(lu.parse_sensors(self.bebop.sensors.sensors_dict))
 
@@ -143,22 +141,17 @@ class DroneTest(Logging):
     def tick(self):
         null_vector = deepcopy(self._movement_vector)
         while self.running:
-            self.log.debug(self.state)
             start_time = time.time()
 
             if self.state in [self.DroneStates.flying, self.DroneStates.hovering]:
-                self.log.debug(self._movement_vector)
-                self.log.debug(self._movement_vector != null_vector)
-
                 if self._movement_vector != null_vector:
                     self.bebop.fly_direct(**self._movement_vector, duration=self._tick_rate)
                 else:
                     self.bebop.smart_sleep(self._tick_rate)
 
             exec_time = time.time() - start_time
-            if self.state in [self.DroneStates.flying, self.DroneStates.hovering]:
+            if self.state in [self.DroneStates.flying, self.DroneStates.hovering] and exec_time > 0:
                 self.exec_time.append(exec_time)
-                self.bebop.smart_sleep(self._tick_rate)
 
     @staticmethod
     def parse(val_):
@@ -182,7 +175,7 @@ class DroneTest(Logging):
 
     def start(self):
         try:
-            if True or self.bebop.connect(5):
+            if self.bebop.connect(5):
                 self.log.info("Successfully connected to the drone")
 
                 self.device.start()
