@@ -3,8 +3,8 @@
 
   "max_altitude": 1.5,
   "max_distance": 10,
-  "max_tilt": 5,
-  "max_tilt_rotation_speed": 80,
-  "max_vertical_speed": 0.5,
-  "max_rotation_speed": 10
+  "max_tilt": 10,
+  "max_tilt_rotation_speed": 100,
+  "max_vertical_speed": 1,
+  "max_rotation_speed": 15
 }

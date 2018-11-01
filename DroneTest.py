@@ -1,16 +1,21 @@
 import enum
 import glob
 import json
+import logging
 import os
 import sys as system
 import time
 from copy import deepcopy
+from datetime import datetime
+from logging import getLogger
 from threading import Thread
+from time import sleep
 
 from inputz import Devices
 
 from Config import c
 from bebop.Bebop import Bebop
+from bebop.DummyBebop import DummyBebop
 from log.LogUtils import LogUtils
 from log.Logging import Logging
 
@@ -21,12 +26,14 @@ class DroneTest(Logging):
 
         # Dronen skal være en tråd, så de ikke hænger i beregninger til reporter
         self.bebop = Bebop()
+        self.bebop = DummyBebop()
 
         self.max_roll = 100
         self.max_pitch = 100
         self.max_yaw = 100
         self.max_vertical_movement = 100
 
+        self.log_time = datetime.now()
         self.exec_time = []
         self.logs = []
         self.func_sates = {}
@@ -123,21 +130,29 @@ class DroneTest(Logging):
         while self.running:
             self.state = self.DroneStates[self.bebop.sensors.flying_state]
 
-            self.bebop.ask_for_state_update()
-            self.bebop.smart_sleep(1)
+            # self.bebop.ask_for_state_update()
+            # self.bebop.smart_sleep(1)
 
             self.logs.append(lu.parse_sensors(self.bebop.sensors.sensors_dict))
 
             self.write_log()
 
+            sleep(self._tick_rate)
+
     def tick(self):
         null_vector = deepcopy(self._movement_vector)
         while self.running:
+            self.log.debug(self.state)
             start_time = time.time()
 
-            if self.state not in [self.DroneStates.flying, self.DroneStates.hovering]:
+            if self.state in [self.DroneStates.flying, self.DroneStates.hovering]:
+                self.log.debug(self._movement_vector)
+                self.log.debug(self._movement_vector != null_vector)
+
                 if self._movement_vector != null_vector:
                     self.bebop.fly_direct(**self._movement_vector, duration=self._tick_rate)
+                else:
+                    self.bebop.smart_sleep(self._tick_rate)
 
             exec_time = time.time() - start_time
             if self.state in [self.DroneStates.flying, self.DroneStates.hovering]:
@@ -154,18 +169,23 @@ class DroneTest(Logging):
         return val_
 
     def write_log(self):
-        with open('logs/exec_times.json', 'w') as f:
+        date_ = self.log_time.strftime('[%d-%m-%Y][%H.%M.%S]')
+
+        os.makedirs(f'logs/{date_}', exist_ok=True)
+
+        with open(f'logs/{date_}/exec_times.json', 'w') as f:
             f.write(json.dumps(self.exec_time, indent=4))
 
-        with open(f'logs/flight_log.json', 'w') as f:
+        with open(f'logs/{date_}/flight_log.json', 'w') as f:
             f.write(json.dumps(self.logs, indent=4))
 
     def start(self):
         try:
-            if self.bebop.connect(5):
+            if True or self.bebop.connect(5):
                 self.log.info("Successfully connected to the drone")
 
                 self.device.start()
+                getLogger('XboxController').setLevel(logging.INFO)
 
                 self.load_profile(self.profile_idx)
 
@@ -184,6 +204,7 @@ class DroneTest(Logging):
 
     def land(self, args):
         if args and self.state in [self.DroneStates.flying, self.DroneStates.hovering]:
+            self.log.debug('land')
             self.bebop.safe_land(5)
 
     def pitch(self, args):
