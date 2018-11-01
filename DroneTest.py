@@ -25,6 +25,8 @@ class DroneTest(Logging):
 
         # Dronen skal være en tråd, så de ikke hænger i beregninger til reporter
         self.bebop = Bebop()
+        self.bebop.set_user_sensor_callback(self.logging, ())
+        self.logging_time = time.time()
         # self.bebop = DummyBebop()
 
         self.max_roll = 100
@@ -124,19 +126,28 @@ class DroneTest(Logging):
             self.bebop.set_max_rotation_speed(profile.get('max_rotation_speed'))
 
     def watchdog(self):
-        lu = LogUtils()
-
         # Used for keeping the drones connection alive
         while self.watchdog_running:
+            self.log.debug(self.state)
             self.state = self.DroneStates[self.bebop.sensors.flying_state]
 
             self.bebop.ask_for_state_update()
 
-            self.logs.append(lu.parse_sensors(self.bebop.sensors.sensors_dict))
-
-            self.write_log()
-
             sleep(self._tick_rate)
+
+    def logging(self, args):
+        if time.time() - self.logging_time < 30:
+            return
+        self.logging_time = time.time()
+
+        self.log.debug(args)
+        self.log.error("LOGGING!!!")
+
+        lu = LogUtils()
+        self.logs.append(lu.parse_sensors(self.bebop.sensors.sensors_dict))
+
+        self.write_log()
+        return
 
     def tick(self):
         null_vector = deepcopy(self._movement_vector)
