@@ -26,7 +26,7 @@ class DroneTest(Logging):
 
         # Dronen skal være en tråd, så de ikke hænger i beregninger til reporter
         self.bebop = Bebop()
-        self.bebop = DummyBebop()
+        # self.bebop = DummyBebop()
 
         self.max_roll = 100
         self.max_pitch = 100
@@ -75,6 +75,7 @@ class DroneTest(Logging):
         self.choose_profile()
 
         self.running = True
+        self.watchdog_running = True
 
         self.i = 0
 
@@ -127,10 +128,10 @@ class DroneTest(Logging):
         lu = LogUtils()
 
         # Used for keeping the drones connection alive
-        while self.running:
+        while self.watchdog_running:
             self.state = self.DroneStates[self.bebop.sensors.flying_state]
 
-            # self.bebop.ask_for_state_update()
+            self.bebop.ask_for_state_update()
             # self.bebop.smart_sleep(1)
 
             self.logs.append(lu.parse_sensors(self.bebop.sensors.sensors_dict))
@@ -242,6 +243,7 @@ class DroneTest(Logging):
         self.bebop.disconnect()
 
         self.running = False
+        self.watchdog_running = False
 
         for thread in self.threads:
             thread.join()
