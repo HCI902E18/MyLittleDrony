@@ -1,6 +1,6 @@
-from DroneTest import DroneTest
+from DroneBinding import DroneBinding
 
-drone = DroneTest()
+drone = DroneBinding()
 
 if __name__ == '__main__':
     drone.start()

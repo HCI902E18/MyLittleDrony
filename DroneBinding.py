@@ -9,7 +9,6 @@ from copy import deepcopy
 from datetime import datetime
 from logging import getLogger
 from threading import Thread
-from time import sleep
 
 from inputz import Devices
 
@@ -19,14 +18,14 @@ from log.LogUtils import LogUtils
 from log.Logging import Logging
 
 
-class DroneTest(Logging):
+class DroneBinding(Logging):
     def __init__(self):
         super().__init__()
 
         # Dronen skal være en tråd, så de ikke hænger i beregninger til reporter
         self.bebop = Bebop()
         self.bebop.set_user_sensor_callback(self.logging, ())
-        self.logging_time = time.time()
+        self.logging_time = 0
         # self.bebop = DummyBebop()
 
         self.max_roll = 100
@@ -40,8 +39,9 @@ class DroneTest(Logging):
         self.func_sates = {}
 
         self.state = self.DroneStates.unknown
+        self.last_sate = None
 
-        self._tick_rate = 0.25
+        self._tick_rate = 0.15
         self._movement_vector = {
             'roll': 0,
             'pitch': 0,
@@ -51,13 +51,11 @@ class DroneTest(Logging):
 
         self.threads = [
             Thread(name='Drone', target=self.tick, args=(())),
-            Thread(name='Watchdog', target=self.watchdog, args=(()))
         ]
 
         self.device = Devices().get_device()
 
-        self.device.method_listener(self.take_off, c.binding('takeoff'))
-        self.device.method_listener(self.land, c.binding('landing'))
+        self.device.method_listener(self.take_off_landing, c.binding('takeoff'))
         self.device.method_listener(self.pitch, c.binding('pitch'))
         self.device.method_listener(self.roll, c.binding('roll'))
         self.device.method_listener(self.yaw, c.binding('yaw'))
@@ -76,7 +74,6 @@ class DroneTest(Logging):
         self.choose_profile()
 
         self.running = True
-        self.watchdog_running = True
 
         self.i = 0
 
@@ -114,43 +111,32 @@ class DroneTest(Logging):
 
     def load_profile(self, idx):
         self.log.info(f"Loading profile: {self.profiles[idx]['name']}")
-        if self.state != self.DroneStates.unknown:
-            profile = self.profiles[idx]
+        profile = self.profiles[idx]
 
-            self.bebop.enable_geofence(True)
-            self.bebop.set_max_altitude(profile.get('max_altitude'))
-            self.bebop.set_max_distance(profile.get('max_distance'))
-            self.bebop.set_max_tilt(profile.get('max_tilt'))
-            self.bebop.set_max_tilt_rotation_speed(profile.get('max_tilt_rotation_speed'))
-            self.bebop.set_max_vertical_speed(profile.get('max_vertical_speed'))
-            self.bebop.set_max_rotation_speed(profile.get('max_rotation_speed'))
-
-    def watchdog(self):
-        # Used for keeping the drones connection alive
-        while self.watchdog_running:
-            self.log.debug(self.state)
-            self.state = self.DroneStates[self.bebop.sensors.flying_state]
-
-            self.bebop.ask_for_state_update()
-
-            sleep(self._tick_rate)
+        for k, v in profile.items():
+            if k[0:3] == 'max':
+                self.bebop.set_setting(k, v)
 
     def logging(self, args):
-        if time.time() - self.logging_time < 30:
-            return
-        self.logging_time = time.time()
+        self.state = self.DroneStates[self.bebop.sensors.flying_state]
 
-        self.log.debug(args)
-        self.log.error("LOGGING!!!")
+        if self.last_sate != self.state:
+            self.log.debug(f"State update: {self.state}")
+            self.last_sate = self.state
+
+        if time.time() - self.logging_time < self._tick_rate:
+            return
+
+        self.logging_time = time.time()
 
         lu = LogUtils()
         self.logs.append(lu.parse_sensors(self.bebop.sensors.sensors_dict))
 
         self.write_log()
-        return
 
     def tick(self):
         null_vector = deepcopy(self._movement_vector)
+
         while self.running:
             start_time = time.time()
 
@@ -162,14 +148,15 @@ class DroneTest(Logging):
 
             exec_time = time.time() - start_time
             if self.state in [self.DroneStates.flying, self.DroneStates.hovering] and exec_time > 0:
-                self.exec_time.append(exec_time)
+                if exec_time > 0:
+                    self.exec_time.append(exec_time)
 
     @staticmethod
     def parse(val_):
         if isinstance(val_, bytes):
             try:
                 return val_.decode('utf-8')
-            except Exception:
+            except UnicodeDecodeError:
                 return f"INVALID_DATA: {str(val_)}"
         return val_
 
@@ -203,13 +190,12 @@ class DroneTest(Logging):
             self.log.error("The drone did actively refuse the connection")
             exit(1)
 
-    def take_off(self, args):
-        if args and self.state == self.DroneStates.landed:
+    def take_off_landing(self, args):
+        if args and self.state in [self.DroneStates.landed, self.DroneStates.unknown, self.DroneStates.landing]:
             self.bebop.safe_takeoff(5)
-
-    def land(self, args):
-        if args and self.state in [self.DroneStates.flying, self.DroneStates.hovering]:
-            self.log.debug('land')
+        elif args and self.state in [self.DroneStates.flying, self.DroneStates.hovering]:
+            self.reset_movement()
+            self.bebop.smart_sleep(2)
             self.bebop.safe_land(5)
 
     def pitch(self, args):
@@ -239,15 +225,17 @@ class DroneTest(Logging):
     def round(value):
         return int(round(value))
 
-    def abort(self):
+    def reset_movement(self):
         for k, _ in self._movement_vector.items():
             self._movement_vector[k] = 0
+
+    def abort(self):
+        self.reset_movement()
 
         self.bebop.emergency_land()
         self.bebop.disconnect()
 
         self.running = False
-        self.watchdog_running = False
 
         for thread in self.threads:
             thread.join()
