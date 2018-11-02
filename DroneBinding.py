@@ -39,7 +39,7 @@ class DroneBinding(Logging):
         self.func_sates = {}
 
         self.state = self.DroneStates.unknown
-        self.last_state = None
+        self.last_sate = None
 
         self._tick_rate = 0.15
         self._movement_vector = {
@@ -55,8 +55,7 @@ class DroneBinding(Logging):
 
         self.device = Devices().get_device()
 
-        self.device.method_listener(self.take_off, c.binding('takeoff'))
-        self.device.method_listener(self.land, c.binding('landing'))
+        self.device.method_listener(self.take_off_landing, c.binding('takeoff'))
         self.device.method_listener(self.pitch, c.binding('pitch'))
         self.device.method_listener(self.roll, c.binding('roll'))
         self.device.method_listener(self.yaw, c.binding('yaw'))
@@ -115,17 +114,17 @@ class DroneBinding(Logging):
         profile = self.profiles[idx]
 
         for k, v in profile.items():
-            self.bebop.set_setting(k, v)
+            if k[0:3] == 'max':
+                self.bebop.set_setting(k, v)
 
     def logging(self, args):
         self.state = self.DroneStates[self.bebop.sensors.flying_state]
 
-        if self.last_state == self.DroneStates.unknown and self.state == self.DroneStates.landed:
-            self.log.debug("Drone is ready for flying!")
+        if self.last_sate != self.state:
+            self.log.debug(f"State update: {self.state}")
+            self.last_sate = self.state
 
-        self.last_state = self.state
-
-        if time.time() - self.logging_time < 1:
+        if time.time() - self.logging_time < self._tick_rate:
             return
 
         self.logging_time = time.time()
@@ -134,16 +133,12 @@ class DroneBinding(Logging):
         self.logs.append(lu.parse_sensors(self.bebop.sensors.sensors_dict))
 
         self.write_log()
-        return
 
     def tick(self):
         null_vector = deepcopy(self._movement_vector)
 
         while self.running:
             start_time = time.time()
-
-            if self._movement_vector != null_vector:
-                self.log.debug(self._movement_vector)
 
             if self.state in [self.DroneStates.flying, self.DroneStates.hovering]:
                 if self._movement_vector != null_vector:
@@ -161,12 +156,11 @@ class DroneBinding(Logging):
         if isinstance(val_, bytes):
             try:
                 return val_.decode('utf-8')
-            except Exception:
+            except UnicodeDecodeError:
                 return f"INVALID_DATA: {str(val_)}"
         return val_
 
     def write_log(self):
-        return
         date_ = self.log_time.strftime('[%d-%m-%Y][%H.%M.%S]')
 
         os.makedirs(f'logs/{date_}', exist_ok=True)
@@ -179,7 +173,7 @@ class DroneBinding(Logging):
 
     def start(self):
         try:
-            if True or self.bebop.connect(5):
+            if self.bebop.connect(5):
                 self.log.info("Successfully connected to the drone")
 
                 self.device.start()
@@ -196,29 +190,24 @@ class DroneBinding(Logging):
             self.log.error("The drone did actively refuse the connection")
             exit(1)
 
-    def take_off(self, args):
-        if args and self.state == self.DroneStates.landed:
+    def take_off_landing(self, args):
+        if args and self.state in [self.DroneStates.landed, self.DroneStates.unknown, self.DroneStates.landing]:
             self.bebop.safe_takeoff(5)
-
-    def land(self, args):
-        if args and self.state in [self.DroneStates.flying, self.DroneStates.hovering]:
-            self.log.debug('land')
+        elif args and self.state in [self.DroneStates.flying, self.DroneStates.hovering]:
+            self.reset_movement()
+            self.bebop.smart_sleep(2)
             self.bebop.safe_land(5)
 
     def pitch(self, args):
-        self.log.debug('pitch: ' + str(args[1]))
         self._movement_vector['pitch'] = self.round(args[1] * self.max_pitch)
 
     def roll(self, args):
-        self.log.debug('roll: ' + str(args[0]))
         self._movement_vector['roll'] = self.round(args[0] * self.max_roll)
 
     def altitude(self, args):
-        self.log.debug('altitude: ' + str(args[1]))
         self._movement_vector['vertical_movement'] = self.round(args[1] * self.max_vertical_movement)
 
     def yaw(self, args):
-        self.log.debug('yaw: ' + str(args[0]))
         self._movement_vector['yaw'] = self.round(args[0] * self.max_yaw)
 
     def change_profile(self, args):
@@ -236,9 +225,12 @@ class DroneBinding(Logging):
     def round(value):
         return int(round(value))
 
-    def abort(self):
+    def reset_movement(self):
         for k, _ in self._movement_vector.items():
             self._movement_vector[k] = 0
+
+    def abort(self):
+        self.reset_movement()
 
         self.bebop.emergency_land()
         self.bebop.disconnect()
