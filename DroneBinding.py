@@ -26,7 +26,6 @@ class DroneBinding(Logging):
         self.bebop = Bebop()
         self.bebop.set_user_sensor_callback(self.logging, ())
         self.logging_time = 0
-        # self.bebop = DummyBebop()
 
         self.max_roll = 100
         self.max_pitch = 100
@@ -36,7 +35,7 @@ class DroneBinding(Logging):
         self.log_time = datetime.now()
         self.exec_time = []
         self.logs = []
-        self.func_sates = {}
+        self.log_interval = 0.5
 
         self.state = self.DroneStates.unknown
         self.last_sate = None
@@ -71,11 +70,9 @@ class DroneBinding(Logging):
         self.profile_loading = False
 
         self.load_profiles()
-        self.choose_profile()
+        self.get_default_profile()
 
         self.running = True
-
-        self.i = 0
 
         self.block_print()
 
@@ -104,10 +101,13 @@ class DroneBinding(Logging):
                     json.loads(f.read())
                 )
 
-    def choose_profile(self):
+    def get_default_profile(self):
         for idx, p in enumerate(self.profiles):
             if p.get('name') == self.default_profile:
                 self.profile_idx = idx
+                return
+        self.profile_idx = 0
+        return
 
     def load_profile(self, idx):
         self.log.info(f"Loading profile: {self.profiles[idx]['name']}")
@@ -117,14 +117,14 @@ class DroneBinding(Logging):
             if k[0:3] == 'max':
                 self.bebop.set_setting(k, v)
 
-    def logging(self, args):
+    def logging(self, _):
         self.state = self.DroneStates[self.bebop.sensors.flying_state]
 
         if self.last_sate != self.state:
             self.log.debug(f"State update: {self.state}")
             self.last_sate = self.state
 
-        if time.time() - self.logging_time < self._tick_rate:
+        if time.time() - self.logging_time < self.log_interval:
             return
 
         self.logging_time = time.time()
@@ -135,40 +135,25 @@ class DroneBinding(Logging):
         self.write_log()
 
     def tick(self):
-        null_vector = deepcopy(self._movement_vector)
-
         while self.running:
             start_time = time.time()
 
             if self.state in [self.DroneStates.flying, self.DroneStates.hovering]:
-                if self._movement_vector != null_vector:
-                    self.bebop.fly_direct(**self._movement_vector, duration=self._tick_rate)
-                else:
-                    self.bebop.smart_sleep(self._tick_rate)
+                self.bebop.fly_direct(**self._movement_vector, duration=self._tick_rate)
 
             exec_time = time.time() - start_time
             if self.state in [self.DroneStates.flying, self.DroneStates.hovering] and exec_time > 0:
-                if exec_time > 0:
-                    self.exec_time.append(exec_time)
-
-    @staticmethod
-    def parse(val_):
-        if isinstance(val_, bytes):
-            try:
-                return val_.decode('utf-8')
-            except UnicodeDecodeError:
-                return f"INVALID_DATA: {str(val_)}"
-        return val_
+                self.exec_time.append(exec_time)
 
     def write_log(self):
-        date_ = self.log_time.strftime('[%d-%m-%Y][%H.%M.%S]')
+        log_date_format = self.log_time.strftime('[%d-%m-%Y][%H.%M.%S]')
 
-        os.makedirs(f'logs/{date_}', exist_ok=True)
+        os.makedirs(f'logs/{log_date_format}', exist_ok=True)
 
-        with open(f'logs/{date_}/exec_times.json', 'w') as f:
+        with open(f'logs/{log_date_format}/exec_times.json', 'w') as f:
             f.write(json.dumps(self.exec_time, indent=4))
 
-        with open(f'logs/{date_}/flight_log.json', 'w') as f:
+        with open(f'logs/{log_date_format}/flight_log.json', 'w') as f:
             f.write(json.dumps(self.logs, indent=4))
 
     def start(self):
