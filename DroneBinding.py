@@ -9,7 +9,6 @@ from copy import deepcopy
 from datetime import datetime
 from logging import getLogger
 from threading import Thread
-from time import sleep
 
 from inputz import Devices
 
@@ -113,16 +112,10 @@ class DroneBinding(Logging):
 
     def load_profile(self, idx):
         self.log.info(f"Loading profile: {self.profiles[idx]['name']}")
-        if self.state != self.DroneStates.unknown:
-            profile = self.profiles[idx]
+        profile = self.profiles[idx]
 
-            self.bebop.enable_geofence(True)
-            self.bebop.set_max_altitude(profile.get('max_altitude'))
-            self.bebop.set_max_distance(profile.get('max_distance'))
-            self.bebop.set_max_tilt(profile.get('max_tilt'))
-            self.bebop.set_max_tilt_rotation_speed(profile.get('max_tilt_rotation_speed'))
-            self.bebop.set_max_vertical_speed(profile.get('max_vertical_speed'))
-            self.bebop.set_max_rotation_speed(profile.get('max_rotation_speed'))
+        for k, v in profile.items():
+            self.bebop.set_setting(k, v)
 
     def logging(self, args):
         self.state = self.DroneStates[self.bebop.sensors.flying_state]
@@ -152,22 +145,16 @@ class DroneBinding(Logging):
             if self._movement_vector != null_vector:
                 self.log.debug(self._movement_vector)
 
-            # if self.state in [self.DroneStates.flying, self.DroneStates.hovering]:
-            self.bebop.fly_direct(**self._movement_vector, duration=self._tick_rate)
-
-            if time.time() - self._tick_rate > 0:
-                self.bebop.smart_sleep(time.time() - self._tick_rate)
-
-            if False:
+            if self.state in [self.DroneStates.flying, self.DroneStates.hovering]:
                 if self._movement_vector != null_vector:
                     self.bebop.fly_direct(**self._movement_vector, duration=self._tick_rate)
                 else:
                     self.bebop.smart_sleep(self._tick_rate)
 
             exec_time = time.time() - start_time
-            # if self.state in [self.DroneStates.flying, self.DroneStates.hovering] and exec_time > 0:
-            if exec_time > 0:
-                self.exec_time.append(exec_time)
+            if self.state in [self.DroneStates.flying, self.DroneStates.hovering] and exec_time > 0:
+                if exec_time > 0:
+                    self.exec_time.append(exec_time)
 
     @staticmethod
     def parse(val_):
@@ -192,7 +179,7 @@ class DroneBinding(Logging):
 
     def start(self):
         try:
-            if self.bebop.connect(5):
+            if True or self.bebop.connect(5):
                 self.log.info("Successfully connected to the drone")
 
                 self.device.start()
