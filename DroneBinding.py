@@ -52,7 +52,6 @@ class DroneBinding(Logging):
 
         self.threads = [
             Thread(name='Drone', target=self.tick, args=(())),
-            # Thread(name='Watchdog', target=self.watchdog, args=(()))
         ]
 
         self.device = Devices().get_device()
@@ -77,7 +76,6 @@ class DroneBinding(Logging):
         self.choose_profile()
 
         self.running = True
-        self.watchdog_running = False
 
         self.i = 0
 
@@ -125,22 +123,6 @@ class DroneBinding(Logging):
             self.bebop.set_max_tilt_rotation_speed(profile.get('max_tilt_rotation_speed'))
             self.bebop.set_max_vertical_speed(profile.get('max_vertical_speed'))
             self.bebop.set_max_rotation_speed(profile.get('max_rotation_speed'))
-
-    def watchdog(self):
-        # Used for keeping the drones connection alive
-        last_state = None
-        while self.watchdog_running:
-            self.state = self.DroneStates[self.bebop.sensors.flying_state]
-
-            self.log.debug(self.state)
-
-            if last_state == self.DroneStates.unknown and self.state == self.DroneStates.landed:
-                self.log.debug("Drone is ready for flying!")
-            last_state = self.state
-
-            # self.bebop.ask_for_state_update()
-
-            sleep(3)
 
     def logging(self, args):
         self.state = self.DroneStates[self.bebop.sensors.flying_state]
@@ -275,7 +257,6 @@ class DroneBinding(Logging):
         self.bebop.disconnect()
 
         self.running = False
-        self.watchdog_running = False
 
         for thread in self.threads:
             thread.join()
