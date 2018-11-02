@@ -19,14 +19,14 @@ from log.LogUtils import LogUtils
 from log.Logging import Logging
 
 
-class DroneTest(Logging):
+class DroneBinding(Logging):
     def __init__(self):
         super().__init__()
 
         # Dronen skal være en tråd, så de ikke hænger i beregninger til reporter
         self.bebop = Bebop()
         self.bebop.set_user_sensor_callback(self.logging, ())
-        self.logging_time = time.time()
+        self.logging_time = 0
         # self.bebop = DummyBebop()
 
         self.max_roll = 100
@@ -40,8 +40,9 @@ class DroneTest(Logging):
         self.func_sates = {}
 
         self.state = self.DroneStates.unknown
+        self.last_state = None
 
-        self._tick_rate = 0.25
+        self._tick_rate = 0.15
         self._movement_vector = {
             'roll': 0,
             'pitch': 0,
@@ -51,7 +52,7 @@ class DroneTest(Logging):
 
         self.threads = [
             Thread(name='Drone', target=self.tick, args=(())),
-            Thread(name='Watchdog', target=self.watchdog, args=(()))
+            # Thread(name='Watchdog', target=self.watchdog, args=(()))
         ]
 
         self.device = Devices().get_device()
@@ -76,7 +77,7 @@ class DroneTest(Logging):
         self.choose_profile()
 
         self.running = True
-        self.watchdog_running = True
+        self.watchdog_running = False
 
         self.i = 0
 
@@ -127,21 +128,32 @@ class DroneTest(Logging):
 
     def watchdog(self):
         # Used for keeping the drones connection alive
+        last_state = None
         while self.watchdog_running:
-            self.log.debug(self.state)
             self.state = self.DroneStates[self.bebop.sensors.flying_state]
 
-            self.bebop.ask_for_state_update()
+            self.log.debug(self.state)
 
-            sleep(self._tick_rate)
+            if last_state == self.DroneStates.unknown and self.state == self.DroneStates.landed:
+                self.log.debug("Drone is ready for flying!")
+            last_state = self.state
+
+            # self.bebop.ask_for_state_update()
+
+            sleep(3)
 
     def logging(self, args):
-        if time.time() - self.logging_time < 30:
-            return
-        self.logging_time = time.time()
+        self.state = self.DroneStates[self.bebop.sensors.flying_state]
 
-        self.log.debug(args)
-        self.log.error("LOGGING!!!")
+        if self.last_state == self.DroneStates.unknown and self.state == self.DroneStates.landed:
+            self.log.debug("Drone is ready for flying!")
+
+        self.last_state = self.state
+
+        if time.time() - self.logging_time < 1:
+            return
+
+        self.logging_time = time.time()
 
         lu = LogUtils()
         self.logs.append(lu.parse_sensors(self.bebop.sensors.sensors_dict))
@@ -151,17 +163,28 @@ class DroneTest(Logging):
 
     def tick(self):
         null_vector = deepcopy(self._movement_vector)
+
         while self.running:
             start_time = time.time()
 
-            if self.state in [self.DroneStates.flying, self.DroneStates.hovering]:
+            if self._movement_vector != null_vector:
+                self.log.debug(self._movement_vector)
+
+            # if self.state in [self.DroneStates.flying, self.DroneStates.hovering]:
+            self.bebop.fly_direct(**self._movement_vector, duration=self._tick_rate)
+
+            if time.time() - self._tick_rate > 0:
+                self.bebop.smart_sleep(time.time() - self._tick_rate)
+
+            if False:
                 if self._movement_vector != null_vector:
                     self.bebop.fly_direct(**self._movement_vector, duration=self._tick_rate)
                 else:
                     self.bebop.smart_sleep(self._tick_rate)
 
             exec_time = time.time() - start_time
-            if self.state in [self.DroneStates.flying, self.DroneStates.hovering] and exec_time > 0:
+            # if self.state in [self.DroneStates.flying, self.DroneStates.hovering] and exec_time > 0:
+            if exec_time > 0:
                 self.exec_time.append(exec_time)
 
     @staticmethod
@@ -174,6 +197,7 @@ class DroneTest(Logging):
         return val_
 
     def write_log(self):
+        return
         date_ = self.log_time.strftime('[%d-%m-%Y][%H.%M.%S]')
 
         os.makedirs(f'logs/{date_}', exist_ok=True)
@@ -213,15 +237,19 @@ class DroneTest(Logging):
             self.bebop.safe_land(5)
 
     def pitch(self, args):
+        self.log.debug('pitch: ' + str(args[1]))
         self._movement_vector['pitch'] = self.round(args[1] * self.max_pitch)
 
     def roll(self, args):
+        self.log.debug('roll: ' + str(args[0]))
         self._movement_vector['roll'] = self.round(args[0] * self.max_roll)
 
     def altitude(self, args):
+        self.log.debug('altitude: ' + str(args[1]))
         self._movement_vector['vertical_movement'] = self.round(args[1] * self.max_vertical_movement)
 
     def yaw(self, args):
+        self.log.debug('yaw: ' + str(args[0]))
         self._movement_vector['yaw'] = self.round(args[0] * self.max_yaw)
 
     def change_profile(self, args):
