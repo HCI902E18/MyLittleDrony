@@ -10,13 +10,18 @@ class Bebop(BaseBebop, Logging):
         Logging.__init__(self)
 
         self.drone_connection = WifiConnection(self, drone_type=self.drone_type)
-        self.enable_geofence(True)
 
     def set_setting(self, key, value):
         try:
             setattr(self, f'set_{key}', value)
         except AttributeError:
             self.log.error(f'Unable to set set_{key}')
+
+    def connect(self, num_retries):
+        if super().connect(num_retries):
+            self.enable_geofence(True)
+            return True
+        return False
 
     # def ask_for_state_update(self):
     #     return
