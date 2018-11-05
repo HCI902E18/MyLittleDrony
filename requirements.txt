@@ -1,5 +1,5 @@
 -e git://github.com/HCI902E18/inputz#egg=inputz
 
-pyparrot
-untangle
-zeroconf
+pyparrot==1.5.10
+untangle==1.1.1
+zeroconf==0.21.3
