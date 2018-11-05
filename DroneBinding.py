@@ -5,7 +5,6 @@ import logging
 import os
 import sys as system
 import time
-from copy import deepcopy
 from datetime import datetime
 from logging import getLogger
 from threading import Thread
@@ -13,6 +12,7 @@ from threading import Thread
 from inputz import Devices
 
 from Config import c
+from PlayAudio import PlayAudio
 from bebop.Bebop import Bebop
 from log.LogUtils import LogUtils
 from log.Logging import Logging
@@ -53,6 +53,10 @@ class DroneBinding(Logging):
         ]
 
         self.device = Devices().get_device()
+
+        if self.device is None:
+            PlayAudio().play('no_controller.wav')
+            exit(0)
 
         self.device.method_listener(self.take_off_landing, c.binding('takeoff'))
         self.device.method_listener(self.pitch, c.binding('pitch'))
@@ -159,6 +163,7 @@ class DroneBinding(Logging):
     def start(self):
         try:
             if self.bebop.connect(5):
+                PlayAudio().play('success.wav')
                 self.log.info("Successfully connected to the drone")
 
                 self.device.start()
@@ -170,9 +175,11 @@ class DroneBinding(Logging):
                 for thread in self.threads:
                     thread.start()
             else:
+                PlayAudio().play('no_drone.wav')
                 self.log.error("Could not connect to drone")
                 exit(1)
         except ConnectionRefusedError:
+            PlayAudio().play('no_drone.wav')
             self.log.error("The drone did actively refuse the connection")
             exit(1)
 
