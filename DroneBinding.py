@@ -163,6 +163,7 @@ class DroneBinding(Logging):
 
                 self.device.start()
                 getLogger('XboxController').setLevel(logging.INFO)
+                getLogger('XboxEliteController').setLevel(logging.INFO)
 
                 self.load_profile(self.profile_idx)
 
