@@ -1,6 +1,3 @@
-[SETTINGS]
-controller = 'Microsoft X-Box 360 pad'
-
 [BINDINGS]
 takeoff = START
 landing = Y
@@ -11,14 +8,5 @@ roll = LEFT_STICK
 yaw = RIGHT_STICK
 altitude_modifier = RIGHT_STICK
 
-take_picture = B
-start_video = Y
-stop_video = Y
-
-barrel_roll_right = RIGHT_TRIGGER
-barrel_roll_left = LEFT_TRIGGER
-
-gimbal_vertical = ARROWS
-gimbal_horizontal = ARROWS
-
 profile_change = SELECT
+change_geofence = RIGHT_TRIGGER

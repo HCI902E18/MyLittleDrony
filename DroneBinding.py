@@ -10,6 +10,7 @@ from logging import getLogger
 from threading import Thread
 
 from inputz import Devices
+from inputz.exceptions.ControllerNotFound import ControllerNotFound
 
 from Config import c
 from PlayAudio import PlayAudio
@@ -52,9 +53,9 @@ class DroneBinding(Logging):
             Thread(name='Drone', target=self.tick, args=(())),
         ]
 
-        self.device = Devices().get_device()
-
-        if self.device is None:
+        try:
+            self.device = Devices().get_device()
+        except ControllerNotFound:
             PlayAudio().play('no_controller.wav')
             exit(0)
 
@@ -65,6 +66,7 @@ class DroneBinding(Logging):
         self.device.method_listener(self.altitude, c.binding('altitude_modifier'))
 
         self.device.method_listener(self.change_profile, c.binding('profile_change'))
+        self.device.method_listener(self.change_geofence, c.binding('change_geofence'))
 
         self.device.abort_function(self.abort)
 
@@ -72,6 +74,7 @@ class DroneBinding(Logging):
         self.profiles = []
         self.profile_idx = 0
         self.profile_loading = False
+        self.geofence_loading = False
 
         self.load_profiles()
         self.get_default_profile()
@@ -205,6 +208,8 @@ class DroneBinding(Logging):
 
     def change_profile(self, args):
         if args and not self.profile_loading:
+            PlayAudio().play('toggle_profile.wav')
+
             self.profile_loading = True
 
             self.profile_idx = (self.profile_idx + 1) % len(self.profiles)
@@ -213,6 +218,15 @@ class DroneBinding(Logging):
             self.profile_loading = False
 
         return
+
+    def change_geofence(self, args):
+        if args and not self.geofence_loading:
+            self.geofence_loading = True
+
+            PlayAudio().play('toggle_geofenceing.wav')
+            self.bebop.toggle_fence()
+        elif not args and self.geofence_loading:
+            self.geofence_loading = False
 
     @staticmethod
     def round(value):
