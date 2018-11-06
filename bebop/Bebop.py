@@ -23,6 +23,8 @@ class Bebop(BaseBebop, Logging):
         self.fence = not self.fence
         self.enable_geofence(self.fence)
 
+        return self.fence
+
     def connect(self, num_retries):
         if super().connect(num_retries):
             self.toggle_fence()
