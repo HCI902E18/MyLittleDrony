@@ -13,7 +13,7 @@ from inputz import Devices
 from inputz.exceptions.ControllerNotFound import ControllerNotFound
 
 from Config import c
-from PlayAudio import PlayAudio
+from Voice import Voice
 from bebop.Bebop import Bebop
 from log.LogUtils import LogUtils
 from log.Logging import Logging
@@ -49,14 +49,16 @@ class DroneBinding(Logging):
             'vertical_movement': 0,
         }
 
+        self.voice = Voice()
         self.threads = [
             Thread(name='Drone', target=self.tick, args=(())),
+            self.voice
         ]
 
         try:
             self.device = Devices().get_device()
         except ControllerNotFound:
-            PlayAudio().pronounce('Unable to connect to controller.')
+            self.voice.pronounce('Unable to connect to controller.')
             exit(0)
 
         self.device.method_listener(self.take_off_landing, c.binding('takeoff'))
@@ -67,6 +69,8 @@ class DroneBinding(Logging):
 
         self.device.method_listener(self.change_profile, c.binding('profile_change'))
         self.device.method_listener(self.change_geofence, c.binding('change_geofence'))
+
+        self.device.method_listener(self.debug_enabler, c.binding('debug_enabler'))
 
         self.device.abort_function(self.abort)
 
@@ -80,6 +84,10 @@ class DroneBinding(Logging):
         self.get_default_profile()
 
         self.running = True
+
+        self.debug = False
+        self.debug_count = 0
+        self.debug_button = False
 
         self.block_print()
 
@@ -168,8 +176,9 @@ class DroneBinding(Logging):
     def start(self):
         try:
             if self.bebop.connect(5):
-                PlayAudio().pronounce('Successfully connected to controller and drone, you are ready to take flight.')
-                self.log.info("Successfully connected to the drone")
+                self.bebop.ask_for_state_update()
+
+                self.voice.pronounce("Successfully connected to the drone")
 
                 self.device.start()
                 getLogger('XboxController').setLevel(logging.INFO)
@@ -180,21 +189,19 @@ class DroneBinding(Logging):
                 for thread in self.threads:
                     thread.start()
             else:
-                PlayAudio().pronounce('Unable to connect to the drone.')
-                self.log.error("Could not connect to drone")
+                self.voice.pronounce("Could not connect to drone")
                 exit(1)
         except ConnectionRefusedError:
-            PlayAudio().pronounce('Unable to connect to the drone.')
-            self.log.error("The drone did actively refuse the connection")
+            self.voice.pronounce("The drone did actively refuse the connection")
             exit(1)
 
     def take_off_landing(self, args):
-        if args and self.state in [self.DroneStates.landed, self.DroneStates.unknown, self.DroneStates.landing]:
-            PlayAudio().pronounce('Take off sequence has been initiated.')
+        if args and self.state in [self.DroneStates.landed, self.DroneStates.landing]:
+            self.voice.pronounce('Take off sequence has been initiated.')
 
             self.bebop.safe_takeoff(5)
         elif args and self.state in [self.DroneStates.flying, self.DroneStates.hovering]:
-            PlayAudio().pronounce('Landing sequence has been initiated.')
+            self.voice.pronounce('Landing sequence has been initiated.')
 
             self.reset_movement()
             self.bebop.smart_sleep(2)
@@ -213,13 +220,16 @@ class DroneBinding(Logging):
         self._movement_vector['yaw'] = self.round(args[0] * self.max_yaw)
 
     def change_profile(self, args):
+        if not self.debug:
+            return
+
         if args and not self.profile_loading:
             self.profile_loading = True
 
             self.profile_idx = (self.profile_idx + 1) % len(self.profiles)
             profile = self.load_profile(self.profile_idx)
 
-            PlayAudio().pronounce(f'Changeing to profile {profile}')
+            self.voice.pronounce(f'Changeing to profile {profile}')
 
         elif not args and self.profile_loading:
             self.profile_loading = False
@@ -227,13 +237,16 @@ class DroneBinding(Logging):
         return
 
     def change_geofence(self, args):
+        if not self.debug:
+            return
+
         if args and not self.geofence_loading:
             self.geofence_loading = True
 
             fence = self.bebop.toggle_fence()
             status = 'on' if fence else 'off'
 
-            PlayAudio().pronounce(f'Drone geofenceing has now been turned {status}')
+            self.voice.pronounce(f'Drone geofenceing has now been turned {status}')
         elif not args and self.geofence_loading:
             self.geofence_loading = False
 
@@ -246,7 +259,7 @@ class DroneBinding(Logging):
             self._movement_vector[k] = 0
 
     def abort(self):
-        PlayAudio().pronounce('The emergency protocol has been initiated.')
+        self.voice.pronounce('The emergency protocol has been initiated.')
         self.reset_movement()
 
         self.bebop.emergency_land()
@@ -256,3 +269,18 @@ class DroneBinding(Logging):
 
         for thread in self.threads:
             thread.join()
+
+    def debug_enabler(self, args):
+        if self.state == self.DroneStates.landed:
+            if args == 1 and not self.debug_button:
+                if self.debug_count == 2:
+                    self.debug_count = 0
+                    self.debug = not self.debug
+
+                    state = 'enabled' if self.debug else 'disabled'
+                    self.voice.pronounce(f"Debugging has been {state}")
+                else:
+                    self.debug_count += 1
+                self.debug_button = True
+            if args == 0 and self.debug_button:
+                self.debug_button = False

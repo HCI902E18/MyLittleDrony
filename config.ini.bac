@@ -10,3 +10,5 @@ altitude_modifier = RIGHT_STICK
 
 profile_change = SELECT
 change_geofence = RIGHT_TRIGGER
+
+debug_enabler = RIGHT_BUMPER

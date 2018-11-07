@@ -4,7 +4,6 @@ from time import sleep
 
 from pyparrot.networking.wifiConnection import WifiConnection as BaseWifiConnection
 
-from PlayAudio import PlayAudio
 from log.Logging import Logging
 
 
@@ -36,7 +35,8 @@ class WifiConnection(BaseWifiConnection, Logging):
             self.timeout_count += 1
             return
 
-        PlayAudio().pronounce('Initiating emergency connection protocol.')
+        # TODO: FIX
+        # PlayAudio().pronounce('Initiating emergency connection protocol.')
 
         # We need to disconnect so we do not get socket errors
         self.disconnect()
