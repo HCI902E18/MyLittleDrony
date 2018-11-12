@@ -204,7 +204,6 @@ class DroneBinding(Logging):
             self.voice.pronounce('Landing sequence has been initiated.')
 
             self.reset_movement()
-            self.bebop.smart_sleep(2)
             self.bebop.safe_land(5)
 
     def pitch(self, args):

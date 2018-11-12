@@ -1,10 +1,10 @@
 {
   "name": "Sport",
 
-  "max_altitude": 5,
-  "max_distance": 25,
-  "max_tilt": 7,
-  "max_tilt_rotation_speed": 120,
-  "max_vertical_speed": 0.5,
-  "max_rotation_speed": 25
+  "max_altitude": 3,
+  "max_distance": 200,
+  "max_tilt": 10,
+  "max_tilt_rotation_speed": 100,
+  "max_vertical_speed": 1.5,
+  "max_rotation_speed": 40
 }
