@@ -83,6 +83,7 @@ class DroneBinding(Logging):
         self.profile_idx = 0
         self.profile_loading = False
         self.geofence_loading = False
+        self.doing_flat_trim = False
 
         self.load_profiles()
         self.get_default_profile()
@@ -242,6 +243,16 @@ class DroneBinding(Logging):
     @staticmethod
     def round(value):
         return int(round(value))
+
+    def do_flat_trim(self, args):
+        if not self.debug:
+            return
+        if args and not self.doing_flat_trim:
+            self.doing_flat_trim = True
+            self.bebop.flat_trim(2)
+
+        elif not args and self.doing_flat_trim:
+            self.doing_flat_trim = False
 
     def change_profile(self, args):
         if not self.debug:
