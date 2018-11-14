@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 from pyparrot.Bebop import Bebop as BaseBebop
 
 from log.Logging import Logging
@@ -10,6 +12,7 @@ class Bebop(BaseBebop, Logging):
         Logging.__init__(self)
 
         self.fence = False
+        self.last_movement = None
 
         self.drone_connection = WifiConnection(self, drone_type=self.drone_type)
 
@@ -31,7 +34,14 @@ class Bebop(BaseBebop, Logging):
             return True
         return False
 
-    # def ask_for_state_update(self):
-    #     return
-    #     command_tuple = self.command_parser.get_command_tuple("ardrone3", "PilotingState", "moveToChanged")
-    #     self.drone_connection.send_noparam_command_packet_ack(command_tuple)
+    def fly(self, movement_vector, duration):
+        self.last_movement = deepcopy(movement_vector)
+        self.fly_direct(**movement_vector, duration=duration)
+
+    def brake(self, duration):
+        self.fly_direct(**self.invert_vector(self.last_movement), duration=duration)
+        return True
+
+    @staticmethod
+    def invert_vector(vector):
+        return {k: v * -1 for k, v in vector.items()}

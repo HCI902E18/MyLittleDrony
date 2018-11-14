@@ -5,6 +5,7 @@ import logging
 import os
 import sys as system
 import time
+from copy import deepcopy
 from datetime import datetime
 from logging import getLogger
 from threading import Thread
@@ -155,11 +156,18 @@ class DroneBinding(Logging):
         self.write_log()
 
     def tick(self):
+        null_vector = deepcopy(self._movement_vector)
+        braked = True
+
         while self.running:
             start_time = time.time()
 
             if self.state in [self.DroneStates.flying, self.DroneStates.hovering]:
-                self.bebop.fly_direct(**self._movement_vector, duration=self._tick_rate)
+                if self._movement_vector == null_vector and not braked:
+                    braked = self.bebop.brake(self._tick_rate * 2)
+                else:
+                    self.bebop.fly(self._movement_vector, self._tick_rate)
+                    braked = False
 
             exec_time = time.time() - start_time
             if self.state in [self.DroneStates.flying, self.DroneStates.hovering] and exec_time > 0:
@@ -231,6 +239,10 @@ class DroneBinding(Logging):
         if (yaw - altitude) >= self.yaw_altitude_damper:
             self._movement_vector['yaw'] = self.round(args[0] * self.max_yaw)
 
+    @staticmethod
+    def round(value):
+        return int(round(value))
+
     def change_profile(self, args):
         if not self.debug:
             return
@@ -261,10 +273,6 @@ class DroneBinding(Logging):
             self.voice.pronounce(f'Drone geofenceing has now been turned {status}')
         elif not args and self.geofence_loading:
             self.geofence_loading = False
-
-    @staticmethod
-    def round(value):
-        return int(round(value))
 
     def reset_movement(self):
         for k, _ in self._movement_vector.items():
