@@ -5,7 +5,6 @@ import logging
 import os
 import sys as system
 import time
-from copy import deepcopy
 from datetime import datetime
 from logging import getLogger
 from threading import Thread
@@ -33,6 +32,9 @@ class DroneBinding(Logging):
         self.max_pitch = 100
         self.max_yaw = 100
         self.max_vertical_movement = 100
+
+        self.roll_damper = 0.75
+        self.yaw_altitude_damper = 0.30
 
         self.log_time = datetime.now()
         self.exec_time = []
@@ -206,19 +208,28 @@ class DroneBinding(Logging):
 
             self.reset_movement()
             self.bebop.safe_land(5)
+            self.bebop.smart_sleep(2)
             self.bebop.ask_for_state_update()
 
     def pitch(self, args):
         self._movement_vector['pitch'] = self.round(args[1] * self.max_pitch)
 
     def roll(self, args):
-        self._movement_vector['roll'] = self.round(args[0] * self.max_roll)
+        self._movement_vector['roll'] = self.round((args[0] * self.max_roll) * self.roll_damper)
 
     def altitude(self, args):
-        self._movement_vector['vertical_movement'] = self.round(args[1] * self.max_vertical_movement)
+        yaw = abs(args[0])
+        altitude = abs(args[1])
+
+        if (altitude - yaw) >= self.yaw_altitude_damper:
+            self._movement_vector['vertical_movement'] = self.round(args[1] * self.max_vertical_movement)
 
     def yaw(self, args):
-        self._movement_vector['yaw'] = self.round(args[0] * self.max_yaw)
+        yaw = abs(args[0])
+        altitude = abs(args[1])
+
+        if (yaw - altitude) >= self.yaw_altitude_damper:
+            self._movement_vector['yaw'] = self.round(args[0] * self.max_yaw)
 
     def change_profile(self, args):
         if not self.debug:
