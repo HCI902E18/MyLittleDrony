@@ -5,6 +5,7 @@ import logging
 import os
 import sys as system
 import time
+from copy import deepcopy
 from datetime import datetime
 from logging import getLogger
 from threading import Thread
@@ -205,6 +206,7 @@ class DroneBinding(Logging):
 
             self.reset_movement()
             self.bebop.safe_land(5)
+            self.bebop.ask_for_state_update()
 
     def pitch(self, args):
         self._movement_vector['pitch'] = self.round(args[1] * self.max_pitch)
