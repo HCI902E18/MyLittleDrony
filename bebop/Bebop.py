@@ -42,7 +42,7 @@ class Bebop(BaseBebop, Logging):
 
     def vector_value(self, key, value, modifier):
         if key in self.blacklisted_movements:
-            return value
+            return 0
         return (value * modifier) * -1
 
     def invert_vector(self, vector, modifier=1):
