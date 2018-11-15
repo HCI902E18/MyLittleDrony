@@ -14,6 +14,8 @@ class Bebop(BaseBebop, Logging):
         self.fence = False
         self.last_movement = None
 
+        self.blacklisted_movements = ['yaw', 'vertical_movement']
+
         self.drone_connection = WifiConnection(self, drone_type=self.drone_type)
 
     def set_setting(self, key, value):
@@ -38,23 +40,29 @@ class Bebop(BaseBebop, Logging):
         self.last_movement = deepcopy(movement_vector)
         self.fly_direct(**movement_vector, duration=duration)
 
-    @staticmethod
-    def invert_vector(vector, modifier=1):
-        return {k: (v * modifier) * -1 for k, v in vector.items()}
+    def vector_value(self, key, value, modifier):
+        if key in self.blacklisted_movements:
+            return value
+        return (value * modifier) * -1
 
-    @staticmethod
-    def max_invert_vector(vector):
+    def invert_vector(self, vector, modifier=1):
+        return {k: self.vector_value(k, v, modifier) for k, v in vector.items()}
+
+    def max_invert_vector(self, vector):
         vector_ = {}
 
         def vector_value(value):
             if value == 0:
                 return 0
             if value > 0:
-                return 100
-            return -100
+                return -100
+            return 100
 
         for k, v in vector.items():
-            vector_[k] = vector_value(v)
+            if k in self.blacklisted_movements:
+                vector_[k] = 0
+            else:
+                vector_[k] = vector_value(v)
 
         return vector_
 
