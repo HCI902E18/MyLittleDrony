@@ -1,13 +1,11 @@
 import enum
 import glob
 import json
-import logging
 import os
 import sys as system
 import time
 from copy import deepcopy
 from datetime import datetime
-from logging import getLogger
 from threading import Thread
 
 from inputz import Devices
@@ -65,7 +63,7 @@ class DroneBinding(Logging):
             self.voice.pronounce('Unable to connect to controller.')
             exit(0)
 
-        self.device.method_listener(self.take_off_landing, c.binding('takeoff'))
+        self.device.method_listener(self.take_off_landing, c.binding('takeoff_landing'))
         self.device.method_listener(self.pitch, c.binding('pitch'))
         self.device.method_listener(self.roll, c.binding('roll'))
         self.device.method_listener(self.yaw, c.binding('yaw'))
@@ -73,6 +71,9 @@ class DroneBinding(Logging):
 
         self.device.method_listener(self.change_profile, c.binding('profile_change'))
         self.device.method_listener(self.change_geofence, c.binding('change_geofence'))
+        self.device.method_listener(self.do_flat_trim, c.binding('do_flat_trim'))
+
+        self.device.method_listener(self.change_brake, c.binding('change_break'))
 
         self.device.method_listener(self.debug_enabler, c.binding('debug_enabler'))
 
@@ -85,6 +86,9 @@ class DroneBinding(Logging):
         self.geofence_loading = False
         self.doing_flat_trim = False
 
+        self.braking = 0
+        self.braking_button = False
+
         self.load_profiles()
         self.get_default_profile()
 
@@ -94,7 +98,7 @@ class DroneBinding(Logging):
         self.debug_count = 0
         self.debug_button = False
 
-        self.block_print()
+        # self.block_print()
 
     class DroneStates(enum.Enum):
         unknown = 'unknown'
@@ -165,7 +169,17 @@ class DroneBinding(Logging):
 
             if self.state in [self.DroneStates.flying, self.DroneStates.hovering]:
                 if self._movement_vector == null_vector and not braked:
-                    braked = self.bebop.brake(self._tick_rate * 2)
+
+                    if self.braking == 0:
+                        braked = self.bebop.brake1(0.5)
+                    elif self.braking == 1:
+                        braked = self.bebop.brake2(0.3)
+                    elif self.braking == 2:
+                        braked = self.bebop.brake3(self._tick_rate * 2)
+
+                elif self._movement_vector == null_vector and braked:
+                    self.bebop.fly(self._movement_vector, self._tick_rate)
+                    braked = True
                 else:
                     self.bebop.fly(self._movement_vector, self._tick_rate)
                     braked = False
@@ -226,18 +240,26 @@ class DroneBinding(Logging):
     def roll(self, args):
         self._movement_vector['roll'] = self.round((args[0] * self.max_roll) * self.roll_damper)
 
+    @property
+    def yaw_altitude_damper_converter(self):
+        return 1 + (1 - self.yaw_altitude_damper)
+
     def altitude(self, args):
         yaw = abs(args[0])
         altitude = abs(args[1])
 
-        if (altitude - yaw) >= self.yaw_altitude_damper:
+        if yaw > altitude * self.yaw_altitude_damper_converter:
+            self._movement_vector['vertical_movement'] = 0
+        else:
             self._movement_vector['vertical_movement'] = self.round(args[1] * self.max_vertical_movement)
 
     def yaw(self, args):
         yaw = abs(args[0])
         altitude = abs(args[1])
 
-        if (yaw - altitude) >= self.yaw_altitude_damper:
+        if altitude > yaw * self.yaw_altitude_damper_converter:
+            self._movement_vector['yaw'] = 0
+        else:
             self._movement_vector['yaw'] = self.round(args[0] * self.max_yaw)
 
     @staticmethod
@@ -247,12 +269,27 @@ class DroneBinding(Logging):
     def do_flat_trim(self, args):
         if not self.debug:
             return
+
+        self.voice.pronounce('Executing flat trim.')
+
         if args and not self.doing_flat_trim:
             self.doing_flat_trim = True
             self.bebop.flat_trim(2)
 
         elif not args and self.doing_flat_trim:
             self.doing_flat_trim = False
+
+    def change_brake(self, args):
+        if not self.debug:
+            return
+
+        if args and not self.braking_button:
+            self.braking_button = True
+            self.braking = (self.braking + 1) % 3
+            self.voice.pronounce(f'Changing break to {self.braking}.')
+
+        elif not args and self.braking_button:
+            self.braking_button = False
 
     def change_profile(self, args):
         if not self.debug:

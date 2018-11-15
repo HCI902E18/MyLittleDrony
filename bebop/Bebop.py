@@ -38,10 +38,37 @@ class Bebop(BaseBebop, Logging):
         self.last_movement = deepcopy(movement_vector)
         self.fly_direct(**movement_vector, duration=duration)
 
-    def brake(self, duration):
+    @staticmethod
+    def invert_vector(vector, modifier=1):
+        return {k: (v * modifier) * -1 for k, v in vector.items()}
+
+    @staticmethod
+    def max_invert_vector(vector):
+        vector_ = {}
+
+        def vector_value(value):
+            if value == 0:
+                return 0
+            if value > 0:
+                return 100
+            return -100
+
+        for k, v in vector.items():
+            vector_[k] = vector_value(v)
+
+        return vector_
+
+    def brake1(self, duration):
+        # Brake for long using inverse vector
         self.fly_direct(**self.invert_vector(self.last_movement), duration=duration)
         return True
 
-    @staticmethod
-    def invert_vector(vector):
-        return {k: v * -1 for k, v in vector.items()}
+    def brake2(self, duration):
+        # Brake for medium using double inverse vector
+        self.fly_direct(**self.invert_vector(self.last_movement, 2), duration=duration)
+        return True
+
+    def brake3(self, duration):
+        # Brake for short using MAX inverse vector
+        self.fly_direct(**self.max_invert_vector(self.last_movement), duration=duration)
+        return True

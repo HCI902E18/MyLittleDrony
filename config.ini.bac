@@ -1,6 +1,5 @@
 [BINDINGS]
-takeoff = START
-landing = Y
+takeoff_landing = START
 
 pitch = LEFT_STICK
 roll = LEFT_STICK
@@ -12,3 +11,6 @@ profile_change = SELECT
 change_geofence = RIGHT_TRIGGER
 
 debug_enabler = RIGHT_BUMPER
+do_flat_trim = LEFT_BUMPER
+
+change_break = X
