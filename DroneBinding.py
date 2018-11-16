@@ -32,6 +32,8 @@ class DroneBinding(Logging):
         self.log_interval = 0.5
 
         self.yaw_altitude_damper = 0.30
+        self.break_timer = 0.1
+        self.break_timer_button = False
 
         self.last_sate = None
 
@@ -61,6 +63,9 @@ class DroneBinding(Logging):
         self.device.method_listener(self.do_flat_trim, c.binding('do_flat_trim'))
 
         self.device.method_listener(self.change_brake, c.binding('change_break'))
+
+        self.device.method_listener(self.inc_break_timer, c.binding('inc_break'))
+        self.device.method_listener(self.dec_break_timer, c.binding('dec_break'))
 
         self.device.method_listener(self.debug_enabler, c.binding('debug_enabler'))
 
@@ -146,9 +151,9 @@ class DroneBinding(Logging):
                 if null_vector.compare(self._movement_vector) and not braked:
                     self.log.info("BREAKING")
                     if self.braking == 0:
-                        braked = self.bebop.brake1(0.1)
+                        braked = self.bebop.brake1(self.break_timer)
                     elif self.braking == 1:
-                        braked = self.bebop.brake2(self._tick_rate)
+                        braked = self.bebop.brake2(self.break_timer)
 
                 elif null_vector.compare(self._movement_vector) and braked:
                     self.bebop.fly(self._movement_vector)
@@ -320,3 +325,35 @@ class DroneBinding(Logging):
                 self.debug_button = True
             if args == 0 and self.debug_button:
                 self.debug_button = False
+
+    def inc_break_timer(self, args):
+        if not self.debug:
+            return
+
+        if args[1] == 1 and not self.break_timer_button:
+            self.break_timer_button = True
+
+            self.break_timer += 0.1
+
+            self.voice.pronounce(f'Incrementing break to {round(self.break_timer,2)}')
+        elif args[1] == 0 and self.break_timer_button:
+            self.break_timer_button = False
+        return
+
+    def dec_break_timer(self, args):
+        if not self.debug:
+            return
+
+        if args[1] == -1 and not self.break_timer_button:
+            self.break_timer_button = True
+
+            if self.break_timer == 0.1:
+                self.voice.pronounce(f'Break timer is as low as it can be')
+
+                return
+            self.break_timer -= 0.1
+
+            self.voice.pronounce(f'Decrementing break to {round(self.break_timer,2)}')
+        elif args[1] == 0 and self.break_timer_button:
+            self.break_timer_button = False
+        return
