@@ -14,3 +14,6 @@ debug_enabler = RIGHT_BUMPER
 do_flat_trim = LEFT_BUMPER
 
 change_break = X
+
+inc_break = ARROWS
+dec_break = ARROWS
