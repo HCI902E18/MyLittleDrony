@@ -5,7 +5,6 @@ import logging
 import os
 import sys as system
 import time
-from copy import deepcopy
 from datetime import datetime
 from logging import getLogger
 from threading import Thread
@@ -15,9 +14,8 @@ from inputz.exceptions.ControllerNotFound import ControllerNotFound
 
 from Config import c
 from Voice import Voice
-from bebop.Bebop import Bebop
-from log.LogUtils import LogUtils
-from log.Logging import Logging
+from bebop import Bebop, Vector
+from log import LogUtils, Logging
 
 
 class DroneBinding(Logging):
@@ -46,12 +44,7 @@ class DroneBinding(Logging):
         self.last_sate = None
 
         self._tick_rate = 0.15
-        self._movement_vector = {
-            'roll': 0,
-            'pitch': 0,
-            'yaw': 0,
-            'vertical_movement': 0,
-        }
+        self._movement_vector = Vector(duration=self._tick_rate)
 
         self.voice = Voice()
         self.threads = [
@@ -100,7 +93,7 @@ class DroneBinding(Logging):
         self.debug_count = 0
         self.debug_button = False
 
-        # self.block_print()
+        self.block_print()
 
     class DroneStates(enum.Enum):
         unknown = 'unknown'
@@ -163,14 +156,14 @@ class DroneBinding(Logging):
         self.write_log()
 
     def tick(self):
-        null_vector = deepcopy(self._movement_vector)
+        null_vector = Vector()
         braked = True
 
         while self.running:
             start_time = time.time()
 
             if self.state in [self.DroneStates.flying, self.DroneStates.hovering]:
-                if self._movement_vector == null_vector and not braked:
+                if null_vector.compare(self._movement_vector) and not braked:
 
                     if self.braking == 0:
                         braked = self.bebop.brake1(0.5)
@@ -179,11 +172,11 @@ class DroneBinding(Logging):
                     elif self.braking == 2:
                         braked = self.bebop.brake3(self._tick_rate * 2)
 
-                elif self._movement_vector == null_vector and braked:
-                    self.bebop.fly(self._movement_vector, self._tick_rate)
+                elif null_vector.compare(self._movement_vector) and braked:
+                    self.bebop.fly(self._movement_vector)
                     braked = True
                 else:
-                    self.bebop.fly(self._movement_vector, self._tick_rate)
+                    self.bebop.fly(self._movement_vector)
                     braked = False
 
             exec_time = time.time() - start_time
@@ -231,16 +224,17 @@ class DroneBinding(Logging):
         elif args and self.state in [self.DroneStates.flying, self.DroneStates.hovering]:
             self.voice.pronounce('Landing sequence has been initiated.')
 
-            self.reset_movement()
+            self._movement_vector.reset()
+            # TODO: Add break
             self.bebop.safe_land(5)
             self.bebop.smart_sleep(2)
             self.bebop.ask_for_state_update()
 
     def pitch(self, args):
-        self._movement_vector['pitch'] = self.round(args[1] * self.max_pitch)
+        self._movement_vector.set_pitch(args[1] * self.max_pitch)
 
     def roll(self, args):
-        self._movement_vector['roll'] = self.round((args[0] * self.max_roll) * self.roll_damper)
+        self._movement_vector.set_roll((args[0] * self.max_roll) * self.roll_damper)
 
     @property
     def yaw_altitude_damper_converter(self):
@@ -251,22 +245,18 @@ class DroneBinding(Logging):
         altitude = abs(args[1])
 
         if yaw > altitude * self.yaw_altitude_damper_converter:
-            self._movement_vector['vertical_movement'] = 0
+            self._movement_vector.set_vertical_movement(0)
         else:
-            self._movement_vector['vertical_movement'] = self.round(args[1] * self.max_vertical_movement)
+            self._movement_vector.set_vertical_movement(args[1] * self.max_vertical_movement)
 
     def yaw(self, args):
         yaw = abs(args[0])
         altitude = abs(args[1])
 
         if altitude > yaw * self.yaw_altitude_damper_converter:
-            self._movement_vector['yaw'] = 0
+            self._movement_vector.set_yaw(0)
         else:
-            self._movement_vector['yaw'] = self.round(args[0] * self.max_yaw)
-
-    @staticmethod
-    def round(value):
-        return int(round(value))
+            self._movement_vector.set_yaw(args[0] * self.max_yaw)
 
     def do_flat_trim(self, args):
         if not self.debug:
@@ -324,13 +314,9 @@ class DroneBinding(Logging):
         elif not args and self.geofence_loading:
             self.geofence_loading = False
 
-    def reset_movement(self):
-        for k, _ in self._movement_vector.items():
-            self._movement_vector[k] = 0
-
     def abort(self):
         self.voice.pronounce('The emergency protocol has been initiated.')
-        self.reset_movement()
+        self._movement_vector.reset()
 
         self.bebop.emergency_land()
         self.bebop.disconnect()

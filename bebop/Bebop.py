@@ -1,8 +1,7 @@
-from copy import deepcopy
-
 from pyparrot.Bebop import Bebop as BaseBebop
 
 from log.Logging import Logging
+from . import Vector
 from .WifiConnection import WifiConnection
 
 
@@ -13,6 +12,7 @@ class Bebop(BaseBebop, Logging):
 
         self.fence = False
         self.last_movement = None
+        self.brake_timer = 0
 
         self.blacklisted_movements = ['yaw', 'vertical_movement']
 
@@ -36,9 +36,10 @@ class Bebop(BaseBebop, Logging):
             return True
         return False
 
-    def fly(self, movement_vector, duration):
-        self.last_movement = deepcopy(movement_vector)
-        self.fly_direct(**movement_vector, duration=duration)
+    def fly(self, movement_vector):
+        self.brake_timer = 0
+        self.last_movement = Vector(**movement_vector.emit())
+        self.fly_direct(**movement_vector.emit())
 
     def vector_value(self, key, value, modifier):
         if key in self.blacklisted_movements:
@@ -68,15 +69,32 @@ class Bebop(BaseBebop, Logging):
 
     def brake1(self, duration):
         # Brake for long using inverse vector
-        self.fly_direct(**self.invert_vector(self.last_movement), duration=duration)
+        self.fly_direct(**self.invert_vector(self.last_movement.emit()), duration=duration)
         return True
 
     def brake2(self, duration):
         # Brake for medium using double inverse vector
-        self.fly_direct(**self.invert_vector(self.last_movement, 2), duration=duration)
+        self.fly_direct(**self.invert_vector(self.last_movement.emit(), 2), duration=duration)
         return True
 
     def brake3(self, duration):
         # Brake for short using MAX inverse vector
-        self.fly_direct(**self.max_invert_vector(self.last_movement), duration=duration)
+        self.fly_direct(**self.max_invert_vector(self.last_movement.emit()), duration=duration)
         return True
+
+    def brake5(self, duration):
+        max_brake_time = 1
+        mapping = {
+            'roll': 'SpeedChanged_speedX',
+            'pitch': 'SpeedChanged_speedY'
+        }
+
+        if self.brake_timer >= max_brake_time:
+            return True
+
+        for k, v in mapping.items():
+            data = self.sensors.sensors_dict.get(k)
+            if data is None:
+                return True
+
+        return False
