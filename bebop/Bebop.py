@@ -12,9 +12,11 @@ class Bebop(BaseBebop, Logging):
         super().__init__(drone_type=drone_type)
         Logging.__init__(self)
 
+        self.max_break_time = 1
+        self.brake_timer = 0
+
         self.fence = False
         self.last_movement = None
-        self.brake_timer = 0
 
         self.state = self.DroneStates.unknown
 
@@ -57,31 +59,15 @@ class Bebop(BaseBebop, Logging):
         self.last_movement = Vector(**movement_vector.emit())
         self.fly_direct(**movement_vector.emit())
 
-    def vector_value(self, key, value, modifier):
-        if key in self.blacklisted_movements:
-            return 0
-        return (value * modifier) * -1
+    def update_state(self):
+        self.state = self.DroneStates[self.sensors.flying_state]
+        return True
 
-    def invert_vector(self, vector, modifier=1):
-        return {k: self.vector_value(k, v, modifier) for k, v in vector.items()}
+    def is_flying(self):
+        return self.state in [self.DroneStates.flying, self.DroneStates.hovering]
 
-    def max_invert_vector(self, vector):
-        vector_ = {}
-
-        def vector_value(value):
-            if value == 0:
-                return 0
-            if value > 0:
-                return -100
-            return 100
-
-        for k, v in vector.items():
-            if k in self.blacklisted_movements:
-                vector_[k] = 0
-            else:
-                vector_[k] = vector_value(v)
-
-        return vector_
+    def is_landed(self):
+        return self.state in [self.DroneStates.landed, self.DroneStates.landing]
 
     def brake1(self, duration):
         speed_x = self.sensors.sensors_dict.get('SpeedChanged_speedX')
@@ -107,28 +93,32 @@ class Bebop(BaseBebop, Logging):
             return False
 
     def brake2(self, duration):
-        max_brake_time = 1
-        mapping = {
+        max_speed = self.get_max_speed()
+        brake = max_speed * self.max_break_time
+
+        brake_mapping = {
             'roll': 'SpeedChanged_speedX',
             'pitch': 'SpeedChanged_speedZ'
         }
 
-        if self.brake_timer >= max_brake_time:
+        if brake <= self.brake_timer:
             return True
 
-        for k, v in mapping.items():
-            data = self.sensors.sensors_dict.get(k)
-            if data is None:
-                return True
+        speed = self.sensors.sensors_dict
+
+        movement = {k: self.brake_value(speed.get(v), max_speed) for k, v in brake_mapping.items()}
+        vector = Vector(**movement, duration=duration)
+        self.fly_direct(**vector.emit())
+
+        self.brake_timer += duration
 
         return False
 
-    def update_state(self):
-        self.state = self.DroneStates[self.sensors.flying_state]
-        return True
+    @staticmethod
+    def brake_value(speed, max_speed):
+        return (100 * (abs(speed) / max_speed)) * round(speed, 0)
 
-    def is_flying(self):
-        return self.state in [self.DroneStates.flying, self.DroneStates.hovering]
+    def get_max_speed(self):
+        speed_keys = ['SpeedChanged_speedX', 'SpeedChanged_speedZ']
 
-    def is_landed(self):
-        return self.state in [self.DroneStates.landed, self.DroneStates.landing]
+        return max([abs(self.sensors.sensors_dict.get(key)) for key in speed_keys])
