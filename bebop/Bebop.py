@@ -1,10 +1,9 @@
 import enum
-from copy import deepcopy
 
 from pyparrot.Bebop import Bebop as BaseBebop
 
 from log.Logging import Logging
-from . import Vector
+from .Vector import Vector
 from .WifiConnection import WifiConnection
 
 
@@ -114,9 +113,6 @@ class Bebop(BaseBebop, Logging):
         self.brake_timer += duration
 
         return False
-
-    def vector_fly(self, vector):
-        self.fly_direct(**deepcopy(vector))
 
     @staticmethod
     def brake_value(speed, max_speed):

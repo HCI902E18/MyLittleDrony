@@ -1,9 +1,9 @@
 class Vector(object):
     def __init__(self, **kwargs):
-        self._roll = kwargs.get('roll', 0)
-        self._pitch = kwargs.get('pitch', 0)
-        self._yaw = kwargs.get('yaw', 0)
-        self._vertical_movement = kwargs.get('vertical_movement', 0)
+        self._roll = self.round(kwargs.get('roll', 0))
+        self._pitch = self.round(kwargs.get('pitch', 0))
+        self._yaw = self.round(kwargs.get('yaw', 0))
+        self._vertical_movement = self.round(kwargs.get('vertical_movement', 0))
         self._duration = kwargs.get('duration', 0)
 
         self.max_roll = 100
