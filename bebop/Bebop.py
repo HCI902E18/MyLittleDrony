@@ -86,7 +86,7 @@ class Bebop(BaseBebop, Logging):
         max_brake_time = 1
         mapping = {
             'roll': 'SpeedChanged_speedX',
-            'pitch': 'SpeedChanged_speedY'
+            'pitch': 'SpeedChanged_speedZ'
         }
 
         if self.brake_timer >= max_brake_time:
