@@ -71,25 +71,27 @@ class Bebop(BaseBebop, Logging):
 
     def brake1(self, duration):
         speed_x = self.sensors.sensors_dict.get('SpeedChanged_speedX', 0)
-        speed_z = self.sensors.sensors_dict.get('SpeedChanged_speedZ', 0)
-
+        speed_y = self.sensors.sensors_dict.get('SpeedChanged_speedY', 0)
+        #roll = x; pitch = y; yaw = z
+        #Roll = "Tilt"
+        #Pitch = Frem/tilbage
         abs_speed_x = abs(speed_x)
-        abs_speed_z = abs(speed_z)
+        abs_speed_y = abs(speed_y)
 
-        if -0.3 <= speed_x <= 0.3 and -0.3 <= speed_z <= 0.3:
+        if -0.3 <= speed_x <= 0.3 and -0.3 <= speed_y <= 0.3:
             return True
-        if abs_speed_x > abs_speed_z:
+        if abs_speed_x > abs_speed_y:
             if speed_x > 0:
-                self.fly_direct(roll=-50, pitch=0, yaw=0, duration=duration, vertical_movement=0)
+                self.fly_direct(roll=25, pitch=0, yaw=0, duration=duration, vertical_movement=0)
                 return False
             else:
-                self.fly_direct(roll=50, pitch=0, yaw=0, duration=duration, vertical_movement=0)
+                self.fly_direct(roll=-25, pitch=0, yaw=0, duration=duration, vertical_movement=0)
                 return False
-        elif speed_z > 0:
-            self.fly_direct(roll=0, pitch=-50, yaw=0, duration=duration, vertical_movement=0)
+        elif speed_y > 0:
+            self.fly_direct(roll=0, pitch=25, yaw=0, duration=duration, vertical_movement=0)
             return False
         else:
-            self.fly_direct(roll=0, pitch=50, yaw=0, duration=duration, vertical_movement=0)
+            self.fly_direct(roll=0, pitch=-25, yaw=0, duration=duration, vertical_movement=0)
             return False
 
     def brake2(self, duration):
@@ -106,7 +108,8 @@ class Bebop(BaseBebop, Logging):
 
         speed = self.sensors.sensors_dict
 
-        movement = {movement: self.brake_value(speed.get(speed_key, 0), max_speed, movement) for movement, speed_key in brake_mapping.items()}
+        movement = {movement: self.brake_value(speed.get(speed_key, 0), max_speed, movement) for movement, speed_key in
+                    brake_mapping.items()}
         vector = Vector(**movement, duration=duration)
         self.fly_direct(**vector.emit())
 
