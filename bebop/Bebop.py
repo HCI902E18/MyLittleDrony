@@ -1,4 +1,5 @@
 import enum
+from copy import deepcopy
 
 from pyparrot.Bebop import Bebop as BaseBebop
 
@@ -56,7 +57,7 @@ class Bebop(BaseBebop, Logging):
 
     def fly(self, movement_vector):
         self.brake_timer = 0
-        self.last_movement = Vector(**movement_vector.emit())
+        self.last_movement = movement_vector.copy()
         self.fly_direct(**movement_vector.emit())
 
     def update_state(self):
@@ -70,8 +71,8 @@ class Bebop(BaseBebop, Logging):
         return self.state in [self.DroneStates.landed, self.DroneStates.landing]
 
     def brake1(self, duration):
-        speed_x = self.sensors.sensors_dict.get('SpeedChanged_speedX')
-        speed_z = self.sensors.sensors_dict.get['SpeedChanged_speedZ']
+        speed_x = self.sensors.sensors_dict.get('SpeedChanged_speedX', 0)
+        speed_z = self.sensors.sensors_dict.get('SpeedChanged_speedZ', 0)
 
         abs_speed_x = abs(speed_x)
         abs_speed_z = abs(speed_z)
@@ -106,13 +107,16 @@ class Bebop(BaseBebop, Logging):
 
         speed = self.sensors.sensors_dict
 
-        movement = {k: self.brake_value(speed.get(v), max_speed) for k, v in brake_mapping.items()}
+        movement = {k: self.brake_value(speed.get(v, 0), max_speed) for k, v in brake_mapping.items()}
         vector = Vector(**movement, duration=duration)
         self.fly_direct(**vector.emit())
 
         self.brake_timer += duration
 
         return False
+
+    def vector_fly(self, vector):
+        self.fly_direct(**deepcopy(vector))
 
     @staticmethod
     def brake_value(speed, max_speed):
@@ -121,4 +125,4 @@ class Bebop(BaseBebop, Logging):
     def get_max_speed(self):
         speed_keys = ['SpeedChanged_speedX', 'SpeedChanged_speedZ']
 
-        return max([abs(self.sensors.sensors_dict.get(key)) for key in speed_keys])
+        return max([abs(self.sensors.sensors_dict.get(key, 0)) for key in speed_keys])

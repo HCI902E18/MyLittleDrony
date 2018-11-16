@@ -15,7 +15,7 @@ class Vector(object):
 
     @staticmethod
     def round(value):
-        return round(value, 0)
+        return int(round(value, 0))
 
     def reset(self):
         for k, _ in self.emit().items():
@@ -37,20 +37,18 @@ class Vector(object):
         self._duration = duration
 
     def emit(self, ignore_duration=False):
-        if ignore_duration:
-            return {
-                'roll': self._roll,
-                'pitch': self._pitch,
-                'yaw': self._yaw,
-                'vertical_movement': self._vertical_movement,
-            }
-        return {
+        values = {
             'roll': self._roll,
             'pitch': self._pitch,
             'yaw': self._yaw,
             'vertical_movement': self._vertical_movement,
-            'duration': self._duration,
         }
+
+        if not ignore_duration:
+            values['duration'] = self._duration
+        else:
+            print(values)
+        return values
 
     def compare(self, vector):
         if not isinstance(vector, Vector):

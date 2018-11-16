@@ -85,7 +85,7 @@ class DroneBinding(Logging):
         self.debug_count = 0
         self.debug_button = False
 
-        self.block_print()
+        # self.block_print()
 
     @staticmethod
     def block_print():
@@ -189,9 +189,11 @@ class DroneBinding(Logging):
                     thread.start()
             else:
                 self.voice.pronounce("Could not connect to drone")
+                self.log.error("Could not connect to drone")
                 exit(1)
         except ConnectionRefusedError:
             self.voice.pronounce("The drone did actively refuse the connection")
+            self.log.error("The drone did actively refuse the connection")
             exit(1)
 
     def take_off_landing(self, args):
