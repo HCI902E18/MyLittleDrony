@@ -15,7 +15,7 @@ class Vector(object):
 
     @staticmethod
     def round(value):
-        return int(round(value))
+        return round(value, 0)
 
     def reset(self):
         for k, _ in self.emit().items():
