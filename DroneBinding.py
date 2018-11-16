@@ -85,7 +85,7 @@ class DroneBinding(Logging):
         self.debug_count = 0
         self.debug_button = False
 
-        # self.block_print()
+        self.block_print()
 
     @staticmethod
     def block_print():
