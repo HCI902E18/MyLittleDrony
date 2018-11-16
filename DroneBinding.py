@@ -1,4 +1,3 @@
-import enum
 import glob
 import json
 import logging
@@ -27,20 +26,13 @@ class DroneBinding(Logging):
         self.bebop.set_user_sensor_callback(self.logging, ())
         self.logging_time = 0
 
-        self.max_roll = 100
-        self.max_pitch = 100
-        self.max_yaw = 100
-        self.max_vertical_movement = 100
-
-        self.roll_damper = 0.75
-        self.yaw_altitude_damper = 0.30
-
         self.log_time = datetime.now()
         self.exec_time = []
         self.logs = []
         self.log_interval = 0.5
 
-        self.state = self.DroneStates.unknown
+        self.yaw_altitude_damper = 0.30
+
         self.last_sate = None
 
         self._tick_rate = 0.15
@@ -95,18 +87,6 @@ class DroneBinding(Logging):
 
         self.block_print()
 
-    class DroneStates(enum.Enum):
-        unknown = 'unknown'
-        landed = 'landed'
-        takingoff = 'takingoff'
-        hovering = 'hovering'
-        flying = 'flying'
-        landing = 'landing'
-        emergency = 'emergency'
-        usertakeoff = 'usertakeoff'
-        motor_ramping = 'motor_ramping'
-        emergency_landing = 'emergency_landing'
-
     @staticmethod
     def block_print():
         system.stdout = open(os.devnull, 'w')
@@ -139,11 +119,11 @@ class DroneBinding(Logging):
         return profile.get('name')
 
     def logging(self, _):
-        self.state = self.DroneStates[self.bebop.sensors.flying_state]
+        self.bebop.update_state()
 
-        if self.last_sate != self.state:
-            self.log.debug(f"State update: {self.state}")
-            self.last_sate = self.state
+        if self.last_sate != self.bebop.state:
+            self.log.debug(f"State update: {self.bebop.state}")
+            self.last_sate = self.bebop.state
 
         if time.time() - self.logging_time < self.log_interval:
             return
@@ -162,11 +142,13 @@ class DroneBinding(Logging):
         while self.running:
             start_time = time.time()
 
-            if self.state in [self.DroneStates.flying, self.DroneStates.hovering]:
+            if self.bebop.is_flying():
                 if null_vector.compare(self._movement_vector) and not braked:
 
                     if self.braking == 0:
                         braked = self.bebop.brake1(0.1)
+                    elif self.braking == 1:
+                        braked = self.bebop.brake2(self._tick_rate)
 
                 elif null_vector.compare(self._movement_vector) and braked:
                     self.bebop.fly(self._movement_vector)
@@ -176,7 +158,7 @@ class DroneBinding(Logging):
                     braked = False
 
             exec_time = time.time() - start_time
-            if self.state in [self.DroneStates.flying, self.DroneStates.hovering] and exec_time > 0:
+            if self.bebop.is_flying() and exec_time > 0:
                 self.exec_time.append(exec_time)
 
     def write_log(self):
@@ -213,11 +195,11 @@ class DroneBinding(Logging):
             exit(1)
 
     def take_off_landing(self, args):
-        if args and self.state in [self.DroneStates.landed, self.DroneStates.landing]:
+        if args and self.bebop.is_landed():
             self.voice.pronounce('Take off sequence has been initiated.')
 
             self.bebop.safe_takeoff(5)
-        elif args and self.state in [self.DroneStates.flying, self.DroneStates.hovering]:
+        elif args and self.bebop.is_flying():
             self.voice.pronounce('Landing sequence has been initiated.')
 
             self._movement_vector.reset()
@@ -227,10 +209,10 @@ class DroneBinding(Logging):
             self.bebop.ask_for_state_update()
 
     def pitch(self, args):
-        self._movement_vector.set_pitch(args[1] * self.max_pitch)
+        self._movement_vector.set_pitch(args[1])
 
     def roll(self, args):
-        self._movement_vector.set_roll((args[0] * self.max_roll) * self.roll_damper)
+        self._movement_vector.set_roll(args[0])
 
     @property
     def yaw_altitude_damper_converter(self):
@@ -243,7 +225,7 @@ class DroneBinding(Logging):
         if yaw > altitude * self.yaw_altitude_damper_converter:
             self._movement_vector.set_vertical_movement(0)
         else:
-            self._movement_vector.set_vertical_movement(args[1] * self.max_vertical_movement)
+            self._movement_vector.set_vertical_movement(args[1])
 
     def yaw(self, args):
         yaw = abs(args[0])
@@ -252,7 +234,7 @@ class DroneBinding(Logging):
         if altitude > yaw * self.yaw_altitude_damper_converter:
             self._movement_vector.set_yaw(0)
         else:
-            self._movement_vector.set_yaw(args[0] * self.max_yaw)
+            self._movement_vector.set_yaw(args[0])
 
     def do_flat_trim(self, args):
         if not self.debug:
@@ -273,7 +255,7 @@ class DroneBinding(Logging):
 
         if args and not self.braking_button:
             self.braking_button = True
-            self.braking = (self.braking + 1) % 4
+            self.braking = (self.braking + 1) % 2
             self.voice.pronounce(f'Changing break to {self.braking}.')
 
         elif not args and self.braking_button:
@@ -323,7 +305,7 @@ class DroneBinding(Logging):
             thread.join()
 
     def debug_enabler(self, args):
-        if self.state == self.DroneStates.landed:
+        if self.bebop.is_landed():
             if args == 1 and not self.debug_button:
                 if self.debug_count == 2:
                     self.debug_count = 0

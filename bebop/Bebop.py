@@ -1,3 +1,5 @@
+import enum
+
 from pyparrot.Bebop import Bebop as BaseBebop
 
 from log.Logging import Logging
@@ -14,9 +16,23 @@ class Bebop(BaseBebop, Logging):
         self.last_movement = None
         self.brake_timer = 0
 
+        self.state = self.DroneStates.unknown
+
         self.blacklisted_movements = ['yaw', 'vertical_movement']
 
         self.drone_connection = WifiConnection(self, drone_type=self.drone_type)
+
+    class DroneStates(enum.Enum):
+        unknown = 'unknown'
+        landed = 'landed'
+        takingoff = 'takingoff'
+        hovering = 'hovering'
+        flying = 'flying'
+        landing = 'landing'
+        emergency = 'emergency'
+        usertakeoff = 'usertakeoff'
+        motor_ramping = 'motor_ramping'
+        emergency_landing = 'emergency_landing'
 
     def set_setting(self, key, value):
         try:
@@ -106,3 +122,13 @@ class Bebop(BaseBebop, Logging):
                 return True
 
         return False
+
+    def update_state(self):
+        self.state = self.DroneStates[self.sensors.flying_state]
+        return True
+
+    def is_flying(self):
+        return self.state in [self.DroneStates.flying, self.DroneStates.hovering]
+
+    def is_landed(self):
+        return self.state in [self.DroneStates.landed, self.DroneStates.landing]
