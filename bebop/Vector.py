@@ -1,9 +1,9 @@
 class Vector(object):
     def __init__(self, **kwargs):
-        self._roll = self.round(kwargs.get('roll', 0))
-        self._pitch = self.round(kwargs.get('pitch', 0))
-        self._yaw = self.round(kwargs.get('yaw', 0))
-        self._vertical_movement = self.round(kwargs.get('vertical_movement', 0))
+        self._roll = kwargs.get('roll', 0)
+        self._pitch = kwargs.get('pitch', 0)
+        self._yaw = kwargs.get('yaw', 0)
+        self._vertical_movement = kwargs.get('vertical_movement', 0)
         self._duration = kwargs.get('duration', 0)
 
         self.max_roll = 100
@@ -22,7 +22,7 @@ class Vector(object):
             setattr(self, f'_{k}', 0)
 
     def set_roll(self, roll):
-        self._roll = self.round((roll * self.max_roll) * self.roll_damper)
+        self._roll = roll
 
     def set_pitch(self, pitch):
         self._pitch = self.round(pitch * self.max_pitch)
@@ -38,10 +38,10 @@ class Vector(object):
 
     def emit(self, ignore_duration=False):
         values = {
-            'roll': self._roll,
-            'pitch': self._pitch,
-            'yaw': self._yaw,
-            'vertical_movement': self._vertical_movement,
+            'roll': self.round((self._roll * self.max_roll) * self.roll_damper),
+            'pitch': self.round(self._pitch * self.max_pitch),
+            'yaw': self.round(self._yaw * self.max_yaw),
+            'vertical_movement': self.round(self._vertical_movement * self.max_vertical_movement)
         }
 
         if not ignore_duration:

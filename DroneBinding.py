@@ -144,7 +144,7 @@ class DroneBinding(Logging):
 
             if self.bebop.is_flying():
                 if null_vector.compare(self._movement_vector) and not braked:
-
+                    self.log.info("BREAKING")
                     if self.braking == 0:
                         braked = self.bebop.brake1(0.1)
                     elif self.braking == 1:
