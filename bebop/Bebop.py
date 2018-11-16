@@ -116,7 +116,7 @@ class Bebop(BaseBebop, Logging):
 
     @staticmethod
     def brake_value(speed, max_speed):
-        return (100 * (abs(speed) / max_speed)) * round(speed, 0)
+        return (100 * (abs(speed) / max_speed)) * (round(speed, 0) * -1)
 
     def get_max_speed(self):
         speed_keys = ['SpeedChanged_speedX', 'SpeedChanged_speedZ']
