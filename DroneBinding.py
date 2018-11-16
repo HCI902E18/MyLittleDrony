@@ -150,10 +150,7 @@ class DroneBinding(Logging):
             if self.bebop.is_flying():
                 if null_vector.compare(self._movement_vector) and not braked:
                     self.log.info("BREAKING")
-                    if self.braking == 0:
-                        braked = self.bebop.brake1(self.break_timer)
-                    elif self.braking == 1:
-                        braked = self.bebop.brake2(self.break_timer)
+                    braked = self.debug_break()
 
                 elif null_vector.compare(self._movement_vector) and braked:
                     self.bebop.fly(self._movement_vector)
@@ -210,7 +207,10 @@ class DroneBinding(Logging):
             self.voice.pronounce('Landing sequence has been initiated.')
 
             self._movement_vector.reset()
+
             # TODO: Add break
+            self.debug_break()
+
             self.bebop.safe_land(5)
             self.bebop.smart_sleep(2)
             self.bebop.ask_for_state_update()
@@ -357,3 +357,10 @@ class DroneBinding(Logging):
         elif args[1] == 0 and self.break_timer_button:
             self.break_timer_button = False
         return
+
+    def debug_break(self):
+        if self.braking == 0:
+            return self.bebop.brake1(self.break_timer)
+        elif self.braking == 1:
+            return self.bebop.brake2(self.break_timer)
+        return True
