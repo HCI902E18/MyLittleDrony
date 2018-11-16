@@ -76,20 +76,20 @@ class Bebop(BaseBebop, Logging):
         abs_speed_x = abs(speed_x)
         abs_speed_z = abs(speed_z)
 
-        if -0.1 <= speed_x <= 0.1 and -0.1 <= speed_z <= 0.1:
+        if -0.3 <= speed_x <= 0.3 and -0.3 <= speed_z <= 0.3:
             return True
         if abs_speed_x > abs_speed_z:
             if speed_x > 0:
-                self.fly_direct(roll=-10, pitch=0, yaw=0, duration=duration, vertical_movement=0)
+                self.fly_direct(roll=-50, pitch=0, yaw=0, duration=duration, vertical_movement=0)
                 return False
             else:
-                self.fly_direct(roll=10, pitch=0, yaw=0, duration=duration, vertical_movement=0)
+                self.fly_direct(roll=50, pitch=0, yaw=0, duration=duration, vertical_movement=0)
                 return False
         elif speed_z > 0:
-            self.fly_direct(roll=0, pitch=-10, yaw=0, duration=duration, vertical_movement=0)
+            self.fly_direct(roll=0, pitch=-50, yaw=0, duration=duration, vertical_movement=0)
             return False
         else:
-            self.fly_direct(roll=0, pitch=10, yaw=0, duration=duration, vertical_movement=0)
+            self.fly_direct(roll=0, pitch=50, yaw=0, duration=duration, vertical_movement=0)
             return False
 
     def brake2(self, duration):
