@@ -178,6 +178,8 @@ class DroneBinding(Logging):
                         braked = self.bebop.brake2(0.3)
                     elif self.braking == 2:
                         braked = self.bebop.brake3(self._tick_rate * 2)
+                    elif self.braking == 3:
+                        braked = self.bebop.brake4(0.1)
 
                 elif self._movement_vector == null_vector and braked:
                     self.bebop.fly(self._movement_vector, self._tick_rate)
@@ -287,7 +289,7 @@ class DroneBinding(Logging):
 
         if args and not self.braking_button:
             self.braking_button = True
-            self.braking = (self.braking + 1) % 3
+            self.braking = (self.braking + 1) % 4
             self.voice.pronounce(f'Changing break to {self.braking}.')
 
         elif not args and self.braking_button:

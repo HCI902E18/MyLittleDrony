@@ -80,3 +80,24 @@ class Bebop(BaseBebop, Logging):
         # Brake for short using MAX inverse vector
         self.fly_direct(**self.max_invert_vector(self.last_movement), duration=duration)
         return True
+
+    def brake4(self, duration):
+        speed_x = self.sensors.sensors_dict.get('SpeedChanged_speedX')
+        speed_z = self.sensors.sensors_dict.get['SpeedChanged_speedZ']
+        abs_speed_x = abs(speed_x)
+        abs_speed_z = abs(speed_z)
+        if -0.1 <= speed_x <= 0.1 and -0.1 <= speed_z <= 0.1:
+            return True
+        if abs_speed_x > abs_speed_z:
+            if speed_x > 0:
+                self.fly_direct(roll=-10, pitch=0, yaw=0, duration=duration, vertical_movement=0)
+                return False
+            else:
+                self.fly_direct(roll=10, pitch=0, yaw=0, duration=duration, vertical_movement=0)
+                return False
+        elif speed_z > 0:
+            self.fly_direct(roll=0, pitch=-10, yaw=0, duration=duration, vertical_movement=0)
+            return False
+        else:
+            self.fly_direct(roll=0, pitch=10, yaw=0, duration=duration, vertical_movement=0)
+            return False
