@@ -12,8 +12,12 @@ class Bebop(BaseBebop, Logging):
         super().__init__(drone_type=drone_type)
         Logging.__init__(self)
 
-        self.max_break_time = 1
+        self.max_break_time = 2
         self.brake_timer = 0
+        self.brake_mapping = {
+            'roll': 'SpeedChanged_speedX',
+            'pitch': 'SpeedChanged_speedY'
+        }
 
         self.fence = False
         self.last_movement = None
@@ -98,18 +102,13 @@ class Bebop(BaseBebop, Logging):
         max_speed = self.get_max_speed()
         brake = max_speed * self.max_break_time
 
-        brake_mapping = {
-            'roll': 'SpeedChanged_speedX',
-            'pitch': 'SpeedChanged_speedZ'
-        }
-
         if brake <= self.brake_timer:
             return True
 
         speed = self.sensors.sensors_dict
 
-        movement = {movement: self.brake_value(speed.get(speed_key, 0), max_speed, movement) for movement, speed_key in
-                    brake_mapping.items()}
+        movement = {movement: self.brake_value(speed.get(speed_key, 0), max_speed, movement) for movement, speed_key in self.brake_mapping.items()}
+
         vector = Vector(**movement, duration=duration)
         self.fly_direct(**vector.emit())
 
@@ -125,6 +124,6 @@ class Bebop(BaseBebop, Logging):
         return 0
 
     def get_max_speed(self):
-        speed_keys = ['SpeedChanged_speedX', 'SpeedChanged_speedZ']
+        speed_keys = [k for _, k in self.brake_mapping.items()]
 
         return max([abs(self.sensors.sensors_dict.get(key, 0)) for key in speed_keys])
