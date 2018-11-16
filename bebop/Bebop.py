@@ -106,7 +106,7 @@ class Bebop(BaseBebop, Logging):
 
         speed = self.sensors.sensors_dict
 
-        movement = {k: self.brake_value(speed.get(v, 0), max_speed) for k, v in brake_mapping.items()}
+        movement = {movement: self.brake_value(speed.get(speed_key, 0), max_speed, movement) for movement, speed_key in brake_mapping.items()}
         vector = Vector(**movement, duration=duration)
         self.fly_direct(**vector.emit())
 
@@ -114,9 +114,12 @@ class Bebop(BaseBebop, Logging):
 
         return False
 
-    @staticmethod
-    def brake_value(speed, max_speed):
-        return (abs(speed) / max_speed) * (round(speed, 0) * -1)
+    def brake_value(self, speed, max_speed, movement):
+        if self.last_movement.get(movement) > 0:
+            return -(abs(speed) / max_speed)
+        elif self.last_movement.get(movement) < 0:
+            return abs(speed) / max_speed
+        return 0
 
     def get_max_speed(self):
         speed_keys = ['SpeedChanged_speedX', 'SpeedChanged_speedZ']

@@ -62,3 +62,9 @@ class Vector(object):
 
     def copy(self):
         return Vector(**self.emit())
+
+    def get(self, key):
+        try:
+            return self.emit().get(key)
+        except KeyError:
+            return 0
