@@ -89,7 +89,7 @@ class Bebop(BaseBebop, Logging):
         return self.state in [self.DroneStates.landed, self.DroneStates.landing]
 
     def get_max_speed(self):
-        speed_keys = [k for _, k in self.brake_mapping.items()]
+        speed_keys = [k['key'] for _, k in self.brake_mapping.items()]
 
         return max([abs(self.sensors.sensors_dict.get(key, 0)) for key in speed_keys])
 
