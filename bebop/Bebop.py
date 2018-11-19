@@ -11,21 +11,7 @@ class Bebop(BaseBebop, Logging):
         super().__init__(drone_type=drone_type)
         Logging.__init__(self)
 
-        self.max_break_time = 1.5
-        self.brake_timer = 0
-        self.brake_mapping = {
-            'roll': {
-                'key': 'SpeedChanged_speedX',
-                'multiplier': 1
-            },
-            'pitch': {
-                'key': 'SpeedChanged_speedY',
-                'multiplier': 1
-            }
-        }
-
         self.fence = False
-        self.last_movement = None
 
         self.state = self.DroneStates.unknown
 
@@ -70,11 +56,6 @@ class Bebop(BaseBebop, Logging):
             self.toggle_fence()
             return True
         return False
-
-    def fly(self, movement_vector):
-        self.brake_timer = 0
-        self.last_movement = movement_vector.copy()
-        self.fly_direct(**movement_vector.emit())
 
     def update_state(self):
         self.state = self.DroneStates[self.sensors.flying_state]
