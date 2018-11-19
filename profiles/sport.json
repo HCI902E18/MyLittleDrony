@@ -6,5 +6,6 @@
   "max_tilt": 10,
   "max_tilt_rotation_speed": 100,
   "max_vertical_speed": 1.5,
-  "max_rotation_speed": 40
+  "max_rotation_speed": 40,
+  "max_break_timer": 1
 }

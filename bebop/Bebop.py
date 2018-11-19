@@ -42,9 +42,16 @@ class Bebop(BaseBebop, Logging):
 
     def set_setting(self, key, value):
         try:
-            setattr(self, f'set_{key}', value)
+            def func_not_found(val):
+                pass
+
+            setting = getattr(self, f'set_{key}', func_not_found)
+            setting(value)
         except AttributeError:
             self.log.error(f'Unable to set set_{key}')
+
+    def max_break_timer(self, val):
+        self.max_break_time = val
 
     def toggle_fence(self):
         self.fence = not self.fence
