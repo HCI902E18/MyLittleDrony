@@ -113,7 +113,7 @@ class Bebop(BaseBebop, Logging):
         """
 
         max_speed = self.get_max_speed()
-        brake = self.max_break_time
+        brake = self.max_break_time * max_speed
 
         sensor_data = self.sensors.sensors_dict
 
