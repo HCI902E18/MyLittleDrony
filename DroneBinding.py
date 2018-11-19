@@ -4,6 +4,8 @@ import logging
 import os
 import sys as system
 import time
+import traceback
+import uuid
 from datetime import datetime
 from logging import getLogger
 from threading import Thread
@@ -138,33 +140,45 @@ class DroneBinding(Logging):
         braked = True
 
         while self.running:
-            start_time = time.time()
+            try:
+                start_time = time.time()
 
-            if self.bebop.is_flying():
-                if null_vector.compare(self._movement_vector) and not braked:
-                    self.log.info("BREAKING")
-                    braked = self.bebop.brake(self._tick_rate)
-                elif null_vector.compare(self._movement_vector) and braked:
-                    self.bebop.smart_sleep(self._tick_rate)
-                    braked = True
-                else:
-                    self.bebop.fly(self._movement_vector)
-                    braked = False
+                if self.bebop.is_flying():
+                    if null_vector.compare(self._movement_vector) and not braked:
+                        self.log.info("BREAKING")
+                        braked = self.bebop.brake(self._tick_rate)
+                    elif null_vector.compare(self._movement_vector) and braked:
+                        self.bebop.smart_sleep(self._tick_rate)
+                        braked = True
+                    else:
+                        self.bebop.fly(self._movement_vector)
+                        braked = False
 
-            exec_time = time.time() - start_time
-            if self.bebop.is_flying() and exec_time > 0:
-                self.exec_time.append(exec_time)
+                exec_time = time.time() - start_time
+                if self.bebop.is_flying() and exec_time > 0:
+                    self.exec_time.append(exec_time)
+            except Exception as e:
+                folder = 'crashes/'
+                file = f'{uuid.uuid4().hex}.txt'
+                os.makedirs(folder, exist_ok=True)
+
+                with open(f'{folder}/{file}', 'w') as f:
+                    f.write(f'{str(e)}\n')
+                    f.write(traceback.format_exc() + '\n')
 
     def write_log(self):
-        log_date_format = self.log_time.strftime('[%d-%m-%Y][%H.%M.%S]')
+        try:
+            log_date_format = self.log_time.strftime('[%d-%m-%Y][%H.%M.%S]')
 
-        os.makedirs(f'logs/{log_date_format}', exist_ok=True)
+            os.makedirs(f'logs/{log_date_format}', exist_ok=True)
 
-        with open(f'logs/{log_date_format}/exec_times.json', 'w') as f:
-            f.write(json.dumps(self.exec_time, indent=4))
+            with open(f'logs/{log_date_format}/exec_times.json', 'w') as f:
+                f.write(json.dumps(self.exec_time, indent=4))
 
-        with open(f'logs/{log_date_format}/flight_log.json', 'w') as f:
-            f.write(json.dumps(self.logs, indent=4))
+            with open(f'logs/{log_date_format}/flight_log.json', 'w') as f:
+                f.write(json.dumps(self.logs, indent=4))
+        except Exception as e:
+            pass
 
     def start(self):
         try:
