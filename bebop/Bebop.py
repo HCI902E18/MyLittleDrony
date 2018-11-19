@@ -1,9 +1,7 @@
 import enum
-from math import floor, ceil
 
 from pyparrot.Bebop import Bebop as BaseBebop
 
-from bebop.Vector import Vector
 from log.Logging import Logging
 from .WifiConnection import WifiConnection
 
@@ -87,51 +85,3 @@ class Bebop(BaseBebop, Logging):
 
     def is_landed(self):
         return self.state in [self.DroneStates.landed, self.DroneStates.landing]
-
-    def get_max_speed(self):
-        speed_keys = [k['key'] for _, k in self.brake_mapping.items()]
-
-        return max([abs(self.sensors.sensors_dict.get(key, 0)) for key in speed_keys])
-
-    @staticmethod
-    def round_direction(val):
-        if val == 0:
-            return 0
-        return floor(val) if val < 0 else ceil(val)
-
-    def speed(self, speed_value, sensor_data, max_speed):
-        speed_ = sensor_data.get(speed_value.get('key'), 0)
-        direction = self.round_direction(speed_)
-        speed_multiplier = abs(speed_) / max_speed
-
-        return (speed_multiplier * direction) * speed_value.get('multiplier')
-
-    def brake(self, duration):
-        """
-        SpeedChanged_speedX (float): Speed on the x axis (when drone moves forward, speed is > 0) (in %)
-        SpeedChanged_speedY (float): Speed on the y axis (when drone moves to right, speed is > 0) (in %)
-        """
-
-        max_speed = self.get_max_speed()
-        brake = self.max_break_time * max_speed
-
-        sensor_data = self.sensors.sensors_dict
-
-        if brake <= self.brake_timer:
-            return True
-
-        duration_ = duration
-        if (self.max_break_time - self.brake_timer) < duration:
-            duration_ = self.max_break_time - self.brake_timer
-
-        vector = Vector(duration=duration_)
-
-        for movement, speed_value in self.brake_mapping.items():
-            vector.set(
-                movement,
-                self.speed(speed_value, sensor_data, max_speed)
-            )
-        self.fly_direct(**vector.emit())
-
-        self.brake_timer += duration
-        return False

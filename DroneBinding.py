@@ -133,23 +133,12 @@ class DroneBinding(Logging):
         self.write_log()
 
     def tick(self):
-        null_vector = Vector()
-        braked = True
-
         while self.running:
             try:
                 start_time = time.time()
 
                 if self.bebop.is_flying():
-                    if self._movement_vector.compare(null_vector) and not braked:
-                        self.log.info("BREAKING")
-                        braked = self.bebop.brake(self._tick_rate)
-                    elif self._movement_vector.compare(null_vector) and braked:
-                        self.bebop.smart_sleep(self._tick_rate)
-                        braked = True
-                    else:
-                        self.bebop.fly(self._movement_vector)
-                        braked = False
+                    self.bebop.fly_direct(**self._movement_vector.emit())
 
                 exec_time = time.time() - start_time
                 if self.bebop.is_flying() and exec_time > 0:
@@ -174,7 +163,7 @@ class DroneBinding(Logging):
 
             with open(f'logs/{log_date_format}/flight_log.json', 'w') as f:
                 f.write(json.dumps(self.logs, indent=4))
-        except Exception as e:
+        except Exception:
             pass
 
     def start(self):
@@ -210,8 +199,6 @@ class DroneBinding(Logging):
             self.voice.pronounce('Landing sequence has been initiated.')
 
             self._movement_vector.reset()
-
-            self.bebop.brake(self._tick_rate)
 
             self.bebop.safe_land(5)
             self.bebop.smart_sleep(2)
