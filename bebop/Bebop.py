@@ -1,4 +1,5 @@
 import enum
+from math import floor, ceil
 
 from pyparrot.Bebop import Bebop as BaseBebop
 
@@ -15,8 +16,14 @@ class Bebop(BaseBebop, Logging):
         self.max_break_time = 1.5
         self.brake_timer = 0
         self.brake_mapping = {
-            'roll': 'SpeedChanged_speedX',
-            'pitch': 'SpeedChanged_speedY'
+            'roll': {
+                'key': 'SpeedChanged_speedX',
+                'multiplier': 1
+            },
+            'pitch': {
+                'key': 'SpeedChanged_speedY',
+                'multiplier': -1
+            }
         }
 
         self.fence = False
@@ -86,13 +93,26 @@ class Bebop(BaseBebop, Logging):
 
         return max([abs(self.sensors.sensors_dict.get(key, 0)) for key in speed_keys])
 
+    @staticmethod
+    def round_direction(val):
+        if val == 0:
+            return 0
+        return floor(val) if val < 0 else ceil(val)
+
+    def speed(self, speed_value, sensor_data, max_speed):
+        speed_ = sensor_data.get(speed_value.get('key'), 0)
+        direction = self.round_direction(speed_)
+        speed_multiplier = abs(speed_) / max_speed
+
+        return speed_multiplier * direction
+
     def brake(self, duration):
         """
         SpeedChanged_speedX (float): Speed on the x axis (when drone moves forward, speed is > 0) (in %)
         SpeedChanged_speedY (float): Speed on the y axis (when drone moves to right, speed is > 0) (in %)
         """
 
-        # max_speed = self.get_max_speed()
+        max_speed = self.get_max_speed()
         brake = self.max_break_time
 
         sensor_data = self.sensors.sensors_dict
@@ -106,10 +126,10 @@ class Bebop(BaseBebop, Logging):
 
         vector = Vector(duration=duration_)
 
-        for movement, speed_key in self.brake_mapping.items():
+        for movement, speed_value in self.brake_mapping.items():
             vector.set(
                 movement,
-                sensor_data.get(speed_key, 0) * -1
+                self.speed(speed_value, sensor_data, max_speed)
             )
         self.fly_direct(**vector.emit())
 
