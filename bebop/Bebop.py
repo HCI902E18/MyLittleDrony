@@ -73,32 +73,7 @@ class Bebop(BaseBebop, Logging):
     def is_landed(self):
         return self.state in [self.DroneStates.landed, self.DroneStates.landing]
 
-    def brake1(self, duration):
-        speed_x = self.sensors.sensors_dict.get('SpeedChanged_speedX', 0)
-        speed_y = self.sensors.sensors_dict.get('SpeedChanged_speedY', 0)
-        # roll = x; pitch = y; yaw = z
-        # Roll = "Tilt"
-        # Pitch = Frem/tilbage
-        abs_speed_x = abs(speed_x)
-        abs_speed_y = abs(speed_y)
-
-        if -0.3 <= speed_x <= 0.3 and -0.3 <= speed_y <= 0.3:
-            return True
-        if abs_speed_x > abs_speed_y:
-            if speed_x > 0:
-                self.fly_direct(roll=25, pitch=0, yaw=0, duration=duration, vertical_movement=0)
-                return False
-            else:
-                self.fly_direct(roll=-25, pitch=0, yaw=0, duration=duration, vertical_movement=0)
-                return False
-        elif speed_y > 0:
-            self.fly_direct(roll=0, pitch=25, yaw=0, duration=duration, vertical_movement=0)
-            return False
-        else:
-            self.fly_direct(roll=0, pitch=-25, yaw=0, duration=duration, vertical_movement=0)
-            return False
-
-    def brake2(self, duration):
+    def brake(self, duration):
         max_speed = self.get_max_speed()
         brake = max_speed * self.max_break_time
 
