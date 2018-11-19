@@ -8,10 +8,16 @@ class LogUtils(object):
             'flyingState': sensor_data.get('FlyingStateChanged_state'),
             'alertState': sensor_data.get('AlertStateChanged_state'),
             'batteryPercent': sensor_data.get('BatteryStateChanged_battery_percent'),
+            'heading': {
+                'heading': sensor_data.get('moveToChanged_heading'),
+                'orientation_mode': sensor_data.get('moveToChanged_orientation_mode'),
+                'status': sensor_data.get('moveToChanged_status'),
+
+            },
             'speed': {
-                'X': self.pos_data(sensor_data.get('SpeedChanged_speedX')),
-                'Y': self.pos_data(sensor_data.get('SpeedChanged_speedY')),
-                'Z': self.pos_data(sensor_data.get('SpeedChanged_speedZ'))
+                'X': sensor_data.get('SpeedChanged_speedX'),
+                'Y': sensor_data.get('SpeedChanged_speedY'),
+                'Z': sensor_data.get('SpeedChanged_speedZ')
             },
             'position': {
                 'latitude': self.pos_data(sensor_data.get('PositionChanged_latitude')),

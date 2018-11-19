@@ -46,8 +46,6 @@ class Vector(object):
 
         if not ignore_duration:
             values['duration'] = self._duration
-        else:
-            print(values)
         return values
 
     def compare(self, vector):
@@ -62,6 +60,10 @@ class Vector(object):
 
     def copy(self):
         return Vector(**self.emit())
+
+    def set(self, key, value):
+        if key in self.emit():
+            setattr(self, f'_{key}', value)
 
     def get(self, key):
         try:
