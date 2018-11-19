@@ -104,7 +104,7 @@ class Bebop(BaseBebop, Logging):
             return 0
 
         movement_ = self.last_movement.get(movement)
-        linear_speed = abs(max_speed) * 2
+        linear_speed = abs(max_speed) * 3
         speed_modifier = 1 if linear_speed > 1 else linear_speed
 
         speed = (abs(speed) / max_speed) * speed_modifier
