@@ -1,5 +1,4 @@
 import enum
-import json
 
 from pyparrot.Bebop import Bebop as BaseBebop
 
@@ -13,7 +12,7 @@ class Bebop(BaseBebop, Logging):
         super().__init__(drone_type=drone_type)
         Logging.__init__(self)
 
-        self.max_break_time = 2
+        self.max_break_time = 1.5
         self.brake_timer = 0
         self.brake_mapping = {
             'roll': 'SpeedChanged_speedX',
@@ -98,7 +97,7 @@ class Bebop(BaseBebop, Logging):
             return 0
 
         movement_ = self.last_movement.get(movement)
-        linear_speed = abs(movement_) * 2
+        linear_speed = abs(max_speed) * 2
         speed_modifier = 1 if linear_speed > 1 else linear_speed
 
         speed = (abs(speed) / max_speed) * speed_modifier
