@@ -76,9 +76,9 @@ class Bebop(BaseBebop, Logging):
     def brake1(self, duration):
         speed_x = self.sensors.sensors_dict.get('SpeedChanged_speedX', 0)
         speed_y = self.sensors.sensors_dict.get('SpeedChanged_speedY', 0)
-        #roll = x; pitch = y; yaw = z
-        #Roll = "Tilt"
-        #Pitch = Frem/tilbage
+        # roll = x; pitch = y; yaw = z
+        # Roll = "Tilt"
+        # Pitch = Frem/tilbage
         abs_speed_x = abs(speed_x)
         abs_speed_y = abs(speed_y)
 
@@ -107,7 +107,8 @@ class Bebop(BaseBebop, Logging):
 
         speed = self.sensors.sensors_dict
 
-        movement = {movement: self.brake_value(speed.get(speed_key, 0), max_speed, movement) for movement, speed_key in self.brake_mapping.items()}
+        movement = {movement: self.brake_value(speed.get(speed_key, 0), max_speed, movement) for movement, speed_key in
+                    self.brake_mapping.items()}
 
         vector = Vector(**movement, duration=duration)
         self.fly_direct(**vector.emit())
@@ -117,11 +118,18 @@ class Bebop(BaseBebop, Logging):
         return False
 
     def brake_value(self, speed, max_speed, movement):
-        if self.last_movement.get(movement) > 0:
-            return -(abs(speed) / max_speed)
-        elif self.last_movement.get(movement) < 0:
-            return abs(speed) / max_speed
-        return 0
+        if movement == 0:
+            return 0
+
+        movement_ = self.last_movement.get(movement)
+        linear_speed = abs(movement_) * 2
+        speed_modifier = 1 if linear_speed > 1 else linear_speed
+
+        speed = (abs(speed) / max_speed) * speed_modifier
+
+        if movement_ > 0:
+            return -speed
+        return speed
 
     def get_max_speed(self):
         speed_keys = [k for _, k in self.brake_mapping.items()]
