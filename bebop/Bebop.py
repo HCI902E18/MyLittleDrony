@@ -3,7 +3,7 @@ from math import floor, ceil
 
 from pyparrot.Bebop import Bebop as BaseBebop
 
-from bebop import Vector
+from bebop.Vector import Vector
 from log.Logging import Logging
 from .WifiConnection import WifiConnection
 

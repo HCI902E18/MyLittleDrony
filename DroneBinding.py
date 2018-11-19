@@ -73,9 +73,6 @@ class DroneBinding(Logging):
         self.geofence_loading = False
         self.doing_flat_trim = False
 
-        self.braking = 0
-        self.braking_button = False
-
         self.load_profiles()
         self.get_default_profile()
 
@@ -144,10 +141,10 @@ class DroneBinding(Logging):
                 start_time = time.time()
 
                 if self.bebop.is_flying():
-                    if null_vector.compare(self._movement_vector) and not braked:
+                    if self._movement_vector.compare(null_vector) and not braked:
                         self.log.info("BREAKING")
                         braked = self.bebop.brake(self._tick_rate)
-                    elif null_vector.compare(self._movement_vector) and braked:
+                    elif self._movement_vector.compare(null_vector) and braked:
                         self.bebop.smart_sleep(self._tick_rate)
                         braked = True
                     else:
