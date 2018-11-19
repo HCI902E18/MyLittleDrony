@@ -60,8 +60,6 @@ class DroneBinding(Logging):
         self.device.method_listener(self.change_geofence, c.binding('change_geofence'))
         self.device.method_listener(self.do_flat_trim, c.binding('do_flat_trim'))
 
-        self.device.method_listener(self.change_brake, c.binding('change_break'))
-
         self.device.method_listener(self.debug_enabler, c.binding('debug_enabler'))
 
         self.device.abort_function(self.abort)
@@ -248,18 +246,6 @@ class DroneBinding(Logging):
 
         elif not args and self.doing_flat_trim:
             self.doing_flat_trim = False
-
-    def change_brake(self, args):
-        if not self.debug:
-            return
-
-        if args and not self.braking_button:
-            self.braking_button = True
-            self.braking = (self.braking + 1) % 2
-            self.voice.pronounce(f'Changing break to {self.braking}.')
-
-        elif not args and self.braking_button:
-            self.braking_button = False
 
     def change_profile(self, args):
         if not self.debug:

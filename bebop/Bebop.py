@@ -50,7 +50,8 @@ class Bebop(BaseBebop, Logging):
         except AttributeError:
             self.log.error(f'Unable to set set_{key}')
 
-    def max_break_timer(self, val):
+    def set_max_break_timer(self, val):
+        self.log.info(str(val))
         self.max_break_time = val
 
     def toggle_fence(self):
