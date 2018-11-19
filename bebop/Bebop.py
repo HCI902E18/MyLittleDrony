@@ -1,4 +1,5 @@
 import enum
+import json
 
 from pyparrot.Bebop import Bebop as BaseBebop
 
@@ -87,6 +88,7 @@ class Bebop(BaseBebop, Logging):
 
         vector = Vector(**movement, duration=duration)
         self.fly_direct(**vector.emit())
+        self.log.info(json.dumps(vector.emit()))
 
         self.brake_timer += duration
 
