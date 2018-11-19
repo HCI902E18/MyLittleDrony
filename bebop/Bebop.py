@@ -22,7 +22,7 @@ class Bebop(BaseBebop, Logging):
             },
             'pitch': {
                 'key': 'SpeedChanged_speedY',
-                'multiplier': -1
+                'multiplier': 1
             }
         }
 
