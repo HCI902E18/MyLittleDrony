@@ -104,7 +104,7 @@ class Bebop(BaseBebop, Logging):
         direction = self.round_direction(speed_)
         speed_multiplier = abs(speed_) / max_speed
 
-        return speed_multiplier * direction
+        return (speed_multiplier * direction) * speed_value.get('multiplier')
 
     def brake(self, duration):
         """
