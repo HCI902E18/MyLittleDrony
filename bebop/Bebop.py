@@ -41,10 +41,6 @@ class Bebop(BaseBebop, Logging):
         except AttributeError:
             self.log.error(f'Unable to set set_{key}')
 
-    def set_max_break_timer(self, val):
-        self.log.info(str(val))
-        self.max_break_time = val
-
     def toggle_fence(self):
         self.fence = not self.fence
         self.enable_geofence(self.fence)
@@ -62,7 +58,5 @@ class Bebop(BaseBebop, Logging):
         return True
 
     def is_flying(self):
-        return self.state in [self.DroneStates.flying, self.DroneStates.hovering]
+        return not self.is_landed()
 
-    def is_landed(self):
-        return self.state in [self.DroneStates.landed, self.DroneStates.landing]
