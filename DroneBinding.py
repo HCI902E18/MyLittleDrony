@@ -133,12 +133,23 @@ class DroneBinding(Logging):
         self.write_log()
 
     def tick(self):
+        null_vector = Vector(duration=self._tick_rate)
+        stopped = True
+
         while self.running:
             try:
                 start_time = time.time()
 
                 if self.bebop.is_flying():
-                    self.bebop.fly_direct(**self._movement_vector.emit())
+                    if self._movement_vector.compare(null_vector):
+                        if stopped:
+                            self.bebop.smart_sleep(self._tick_rate)
+                        else:
+                            self.bebop.fly_direct(**null_vector.emit())
+                            stopped = True
+                    else:
+                        self.bebop.fly_direct(**self._movement_vector.emit())
+                        stopped = False
 
                 exec_time = time.time() - start_time
                 if self.bebop.is_flying() and exec_time > 0:
