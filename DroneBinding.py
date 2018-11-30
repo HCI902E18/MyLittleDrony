@@ -182,7 +182,7 @@ class DroneBinding(Logging):
             if self.bebop.connect(5):
                 self.bebop.ask_for_state_update()
 
-                self.voice.pronounce("Successfully connected to the drone")
+                self.voice.force_pronounce("Successfully connected to the drone")
 
                 self.device.start()
                 getLogger('XboxController').setLevel(logging.INFO)
@@ -193,11 +193,11 @@ class DroneBinding(Logging):
                 for thread in self.threads:
                     thread.start()
             else:
-                self.voice.pronounce("Could not connect to drone")
+                self.voice.force_pronounce("Could not connect to drone")
                 self.log.error("Could not connect to drone")
                 exit(1)
         except ConnectionRefusedError:
-            self.voice.pronounce("The drone did actively refuse the connection")
+            self.voice.force_pronounce("The drone did actively refuse the connection")
             self.log.error("The drone did actively refuse the connection")
             exit(1)
 

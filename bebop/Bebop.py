@@ -58,5 +58,7 @@ class Bebop(BaseBebop, Logging):
         return True
 
     def is_flying(self):
-        return not self.is_landed()
+        return self.state in [self.DroneStates.flying, self.DroneStates.hovering]
 
+    def is_landed(self):
+        return self.state in [self.DroneStates.landed, self.DroneStates.landing]

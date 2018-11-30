@@ -20,10 +20,19 @@ class Voice(threading.Thread, Logging):
     def pronounce(self, text):
         self.things_to_say.put_nowait(text)
 
+    def force_pronounce(self, text):
+        self.speak(text)
+
     def join(self, timeout=None):
         self.running = False
 
         super().join(timeout)
+
+    @staticmethod
+    def speak(text):
+        engine = pyttsx3.init()
+        engine.say(text)
+        engine.runAndWait()
 
     def run(self):
         while self.running:
@@ -31,9 +40,6 @@ class Voice(threading.Thread, Logging):
                 text = self.things_to_say.get()
 
                 self.log.info(text)
-
-                engine = pyttsx3.init()
-                engine.say(text)
-                engine.runAndWait()
+                self.speak(text)
             else:
                 sleep(1)
