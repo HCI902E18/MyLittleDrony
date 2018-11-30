@@ -142,11 +142,10 @@ class DroneBinding(Logging):
 
                 if self.bebop.is_flying():
                     if self._movement_vector.compare(null_vector):
-                        if stopped:
-                            self.bebop.smart_sleep(self._tick_rate)
-                        else:
+                        if not stopped:
                             self.bebop.fly_direct(**null_vector.emit())
                             stopped = True
+                        self.bebop.smart_sleep(self._tick_rate)
                     else:
                         self.bebop.fly_direct(**self._movement_vector.emit())
                         stopped = False

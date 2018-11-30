@@ -25,13 +25,13 @@ class Vector(object):
         self._roll = roll
 
     def set_pitch(self, pitch):
-        self._pitch = self.round(pitch * self.max_pitch)
+        self._pitch = pitch
 
     def set_yaw(self, yaw):
-        self._yaw = self.round(yaw * self.max_yaw)
+        self._yaw = yaw
 
     def set_vertical_movement(self, vertical_movement):
-        self._vertical_movement = self.round(vertical_movement * self.max_vertical_movement)
+        self._vertical_movement = vertical_movement
 
     def set_duration(self, duration):
         self._duration = duration
