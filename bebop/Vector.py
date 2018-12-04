@@ -36,12 +36,12 @@ class Vector(object):
     def set_duration(self, duration):
         self._duration = duration
 
-    def emit(self, ignore_duration=False):
+    def emit(self, ignore_duration=False, modifier=1):
         values = {
-            'roll': self.round((self._roll * self.max_roll) * self.roll_damper),
-            'pitch': self.round(self._pitch * self.max_pitch),
-            'yaw': self.round(self._yaw * self.max_yaw),
-            'vertical_movement': self.round(self._vertical_movement * self.max_vertical_movement)
+            'roll': self.round((self._roll * self.max_roll) * self.roll_damper * modifier),
+            'pitch': self.round(self._pitch * self.max_pitch * modifier),
+            'yaw': self.round(self._yaw * self.max_yaw * modifier),
+            'vertical_movement': self.round(self._vertical_movement * self.max_vertical_movement * modifier)
         }
 
         if not ignore_duration:

@@ -15,9 +15,9 @@ class Bebop(BaseBebop, Logging):
 
         self.state = self.DroneStates.unknown
 
-        self.blacklisted_movements = ['yaw', 'vertical_movement']
-
         self.drone_connection = WifiConnection(self, drone_type=self.drone_type)
+
+        self.max_modifier = 1
 
     class DroneStates(enum.Enum):
         unknown = 'unknown'
@@ -40,6 +40,9 @@ class Bebop(BaseBebop, Logging):
             setting(value)
         except AttributeError:
             self.log.error(f'Unable to set set_{key}')
+
+    def set_max_modifier(self, val):
+        self.max_modifier = val
 
     def toggle_fence(self):
         self.fence = not self.fence

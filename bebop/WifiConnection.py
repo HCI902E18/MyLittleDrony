@@ -15,6 +15,7 @@ class WifiConnection(BaseWifiConnection, Logging):
         Logging.__init__(self)
 
         self.timeout_count = 0
+        self.timeout_max = 2
         self.reconnect_sleep = 5
 
         self.name = "MyLittleDroney"
@@ -34,7 +35,7 @@ class WifiConnection(BaseWifiConnection, Logging):
         self.disconnect()
 
     def handle_timeout(self):
-        if self.timeout_count < 2:
+        if self.timeout_count < self.timeout_max:
             self.log.debug("TIMEOUT")
             self.timeout_count += 1
             return

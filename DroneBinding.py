@@ -147,7 +147,7 @@ class DroneBinding(Logging):
                             stopped = True
                         self.bebop.smart_sleep(self._tick_rate)
                     else:
-                        self.bebop.fly_direct(**self._movement_vector.emit())
+                        self.bebop.fly_direct(**self._movement_vector.emit(modifier=self.bebop.max_modifier))
                         stopped = False
 
                 exec_time = time.time() - start_time
