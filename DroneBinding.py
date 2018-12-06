@@ -79,7 +79,7 @@ class DroneBinding(Logging):
         self.debug_count = 0
         self.debug_button = False
 
-        self.block_print()
+        # self.block_print()
 
     @staticmethod
     def block_print():
@@ -177,7 +177,7 @@ class DroneBinding(Logging):
                 getLogger('XboxController').setLevel(logging.INFO)
                 getLogger('XboxEliteController').setLevel(logging.INFO)
 
-                self.load_profile(self.profile_idx)
+                # self.load_profile(self.profile_idx)
 
                 for thread in self.threads:
                     thread.start()
@@ -232,7 +232,7 @@ class DroneBinding(Logging):
         else:
             self._movement_vector.set_yaw(args[0])
 
-    @button
+    # @button
     def do_flat_trim(self, args):
         if not self.debug:
             return
@@ -242,7 +242,7 @@ class DroneBinding(Logging):
         if args:
             self.bebop.flat_trim(2)
 
-    @button
+    # @button
     def change_profile(self, args):
         if not self.debug:
             return
@@ -255,7 +255,7 @@ class DroneBinding(Logging):
 
             self.voice.pronounce(f'Changeing to profile {profile}')
 
-    @button
+    # @button
     def change_geofence(self, args):
         if not self.debug:
             return
