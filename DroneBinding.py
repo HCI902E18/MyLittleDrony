@@ -248,12 +248,12 @@ class DroneBinding(Logging):
             return
 
         if args:
+            self.voice.pronounce(f'Loading new profile')
+
             self.profile_idx = (self.profile_idx + 1) % len(self.profiles)
             profile = self.load_profile(self.profile_idx)
 
             self.voice.pronounce(f'Changeing to profile {profile}')
-
-        return
 
     @button
     def change_geofence(self, args):
