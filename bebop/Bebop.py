@@ -65,3 +65,13 @@ class Bebop(BaseBebop, Logging):
 
     def is_landed(self):
         return self.state in [self.DroneStates.landed, self.DroneStates.landing]
+
+    def fly(self, vector):
+        command_tuple = self.command_parser.get_command_tuple("ardrone3", "Piloting", "PCMD")
+
+        my_roll = self._ensure_fly_command_in_range(vector.get('roll'))
+        my_pitch = self._ensure_fly_command_in_range(vector.get('pitch'))
+        my_yaw = self._ensure_fly_command_in_range(vector.get('yaw'))
+        my_vertical = self._ensure_fly_command_in_range(vector.get('vertical_movement'))
+
+        self.drone_connection.send_movement_command(command_tuple, my_roll, my_pitch, my_yaw, my_vertical)

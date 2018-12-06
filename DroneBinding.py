@@ -11,6 +11,7 @@ from logging import getLogger
 from threading import Thread
 
 from inputz import Devices
+from inputz.decorators.button import button
 from inputz.exceptions.ControllerNotFound import ControllerNotFound
 
 from Config import c
@@ -29,7 +30,6 @@ class DroneBinding(Logging):
         self.logging_time = 0
 
         self.log_time = datetime.now()
-        self.exec_time = []
         self.logs = []
         self.log_interval = 0.5
 
@@ -37,8 +37,8 @@ class DroneBinding(Logging):
 
         self.last_sate = None
 
-        self._tick_rate = 0.15
-        self._movement_vector = Vector(duration=self._tick_rate)
+        self._tick_rate = 0.1
+        self._movement_vector = Vector()
 
         self.voice = Voice()
         self.threads = [
@@ -69,9 +69,6 @@ class DroneBinding(Logging):
         self.default_profile = 'Default'
         self.profiles = []
         self.profile_idx = 0
-        self.profile_loading = False
-        self.geofence_loading = False
-        self.doing_flat_trim = False
 
         self.load_profiles()
         self.get_default_profile()
@@ -113,6 +110,7 @@ class DroneBinding(Logging):
             if k[0:3] == 'max':
                 self.bebop.set_setting(k, v)
 
+        self._movement_vector.set_modifier(self.bebop.max_modifier)
         return profile.get('name')
 
     def logging(self, _):
@@ -133,26 +131,21 @@ class DroneBinding(Logging):
         self.write_log()
 
     def tick(self):
-        null_vector = Vector(duration=self._tick_rate)
+        null_vector = Vector()
         stopped = True
 
         while self.running:
             try:
-                start_time = time.time()
-
                 if self.bebop.is_flying():
                     if self._movement_vector.compare(null_vector):
                         if not stopped:
-                            self.bebop.fly_direct(**null_vector.emit())
+                            self.bebop.fly(null_vector)
                             stopped = True
-                        self.bebop.smart_sleep(self._tick_rate)
                     else:
-                        self.bebop.fly_direct(**self._movement_vector.emit(modifier=self.bebop.max_modifier))
+                        self.bebop.fly(self._movement_vector)
                         stopped = False
 
-                exec_time = time.time() - start_time
-                if self.bebop.is_flying() and exec_time > 0:
-                    self.exec_time.append(exec_time)
+                self.bebop.smart_sleep(self._tick_rate)
             except Exception as e:
                 folder = 'crashes/'
                 file = f'{uuid.uuid4().hex}.txt'
@@ -167,9 +160,6 @@ class DroneBinding(Logging):
             log_date_format = self.log_time.strftime('[%d-%m-%Y][%H.%M.%S]')
 
             os.makedirs(f'logs/{log_date_format}', exist_ok=True)
-
-            with open(f'logs/{log_date_format}/exec_times.json', 'w') as f:
-                f.write(json.dumps(self.exec_time, indent=4))
 
             with open(f'logs/{log_date_format}/flight_log.json', 'w') as f:
                 f.write(json.dumps(self.logs, indent=4))
@@ -242,49 +232,39 @@ class DroneBinding(Logging):
         else:
             self._movement_vector.set_yaw(args[0])
 
+    @button
     def do_flat_trim(self, args):
         if not self.debug:
             return
 
         self.voice.pronounce('Executing flat trim.')
 
-        if args and not self.doing_flat_trim:
-            self.doing_flat_trim = True
+        if args:
             self.bebop.flat_trim(2)
 
-        elif not args and self.doing_flat_trim:
-            self.doing_flat_trim = False
-
+    @button
     def change_profile(self, args):
         if not self.debug:
             return
 
-        if args and not self.profile_loading:
-            self.profile_loading = True
-
+        if args:
             self.profile_idx = (self.profile_idx + 1) % len(self.profiles)
             profile = self.load_profile(self.profile_idx)
 
             self.voice.pronounce(f'Changeing to profile {profile}')
 
-        elif not args and self.profile_loading:
-            self.profile_loading = False
-
         return
 
+    @button
     def change_geofence(self, args):
         if not self.debug:
             return
 
-        if args and not self.geofence_loading:
-            self.geofence_loading = True
-
+        if args:
             fence = self.bebop.toggle_fence()
             status = 'on' if fence else 'off'
 
             self.voice.pronounce(f'Drone geofenceing has now been turned {status}')
-        elif not args and self.geofence_loading:
-            self.geofence_loading = False
 
     def abort(self):
         self.voice.pronounce('The emergency protocol has been initiated.')

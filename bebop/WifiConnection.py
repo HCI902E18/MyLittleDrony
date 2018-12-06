@@ -132,3 +132,7 @@ class WifiConnection(BaseWifiConnection, Logging):
         tcp_sock.close()
 
         return finished
+
+    def send_movement_command(self, command_tuple, roll, pitch, yaw, vertical_movement):
+        self.send_single_pcmd_command(command_tuple, roll, pitch, yaw, vertical_movement)
+        self.smart_sleep(0.1)

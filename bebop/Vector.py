@@ -4,7 +4,6 @@ class Vector(object):
         self._pitch = kwargs.get('pitch', 0)
         self._yaw = kwargs.get('yaw', 0)
         self._vertical_movement = kwargs.get('vertical_movement', 0)
-        self._duration = kwargs.get('duration', 0)
 
         self.max_roll = 100
         self.max_pitch = 100
@@ -12,6 +11,8 @@ class Vector(object):
         self.max_vertical_movement = 100
 
         self.roll_damper = 0.75
+
+        self.modifier = 1
 
     @staticmethod
     def round(value):
@@ -33,27 +34,22 @@ class Vector(object):
     def set_vertical_movement(self, vertical_movement):
         self._vertical_movement = vertical_movement
 
-    def set_duration(self, duration):
-        self._duration = duration
-
-    def emit(self, ignore_duration=False, modifier=1):
+    def emit(self):
         values = {
-            'roll': self.round((self._roll * self.max_roll) * self.roll_damper * modifier),
-            'pitch': self.round(self._pitch * self.max_pitch * modifier),
-            'yaw': self.round(self._yaw * self.max_yaw * modifier),
-            'vertical_movement': self.round(self._vertical_movement * self.max_vertical_movement * modifier)
+            'roll': self.round((self._roll * self.max_roll) * self.roll_damper * self.modifier),
+            'pitch': self.round(self._pitch * self.max_pitch * self.modifier),
+            'yaw': self.round(self._yaw * self.max_yaw * self.modifier),
+            'vertical_movement': self.round(self._vertical_movement * self.max_vertical_movement * self.modifier)
         }
 
-        if not ignore_duration:
-            values['duration'] = self._duration
         return values
 
     def compare(self, vector):
         if not isinstance(vector, Vector):
             return False
 
-        vector_values = vector.emit(True)
-        for k, v in self.emit(True).items():
+        vector_values = vector.emit()
+        for k, v in self.emit().items():
             if v != vector_values[k]:
                 return False
         return True
@@ -70,3 +66,6 @@ class Vector(object):
             return self.emit().get(key)
         except KeyError:
             return 0
+
+    def set_modifier(self, max_modifier):
+        self.modifier = max_modifier
