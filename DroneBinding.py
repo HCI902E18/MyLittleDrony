@@ -29,7 +29,6 @@ class DroneBinding(Logging):
         self.logging_time = 0
 
         self.log_time = datetime.now()
-        self.exec_time = []
         self.logs = []
         self.log_interval = 0.5
 
@@ -62,7 +61,7 @@ class DroneBinding(Logging):
         self.device.method_listener(self.change_geofence, c.binding('change_geofence'), self.device.Handler.single)
         self.device.method_listener(self.do_flat_trim, c.binding('do_flat_trim'), self.device.Handler.single)
 
-        self.device.method_listener(self.debug_enabler, c.binding('debug_enabler'))
+        self.device.method_listener(self.debug_enabler, c.binding('debug_enabler'), self.device.Handler.single)
 
         self.device.abort_function(self.abort)
 
@@ -146,10 +145,8 @@ class DroneBinding(Logging):
                     else:
                         self.bebop.fly_direct(**self._movement_vector.emit(modifier=self.bebop.max_modifier))
                         stopped = False
-
-                exec_time = time.time() - start_time
-                if self.bebop.is_flying() and exec_time > 0:
-                    self.exec_time.append(exec_time)
+                else:
+                    self.bebop.ask_for_state_update()
             except Exception as e:
                 folder = 'crashes/'
                 file = f'{uuid.uuid4().hex}.txt'
@@ -164,9 +161,6 @@ class DroneBinding(Logging):
             log_date_format = self.log_time.strftime('[%d-%m-%Y][%H.%M.%S]')
 
             os.makedirs(f'logs/{log_date_format}', exist_ok=True)
-
-            with open(f'logs/{log_date_format}/exec_times.json', 'w') as f:
-                f.write(json.dumps(self.exec_time, indent=4))
 
             with open(f'logs/{log_date_format}/flight_log.json', 'w') as f:
                 f.write(json.dumps(self.logs, indent=4))
@@ -282,7 +276,7 @@ class DroneBinding(Logging):
 
     def debug_enabler(self, args):
         if self.bebop.is_landed():
-            if args == 1 and not self.debug_button:
+            if args:
                 if self.debug_count == 2:
                     self.debug_count = 0
                     self.debug = not self.debug
@@ -291,6 +285,3 @@ class DroneBinding(Logging):
                     self.voice.pronounce(f"Debugging has been {state}")
                 else:
                     self.debug_count += 1
-                self.debug_button = True
-            if args == 0 and self.debug_button:
-                self.debug_button = False
