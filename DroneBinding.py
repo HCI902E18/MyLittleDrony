@@ -58,9 +58,9 @@ class DroneBinding(Logging):
         self.device.method_listener(self.yaw, c.binding('yaw'))
         self.device.method_listener(self.altitude, c.binding('altitude_modifier'))
 
-        self.device.method_listener(self.change_profile, c.binding('profile_change'))
-        self.device.method_listener(self.change_geofence, c.binding('change_geofence'))
-        self.device.method_listener(self.do_flat_trim, c.binding('do_flat_trim'))
+        self.device.method_listener(self.change_profile, c.binding('profile_change'), self.device.Handler.single)
+        self.device.method_listener(self.change_geofence, c.binding('change_geofence'), self.device.Handler.single)
+        self.device.method_listener(self.do_flat_trim, c.binding('do_flat_trim'), self.device.Handler.single)
 
         self.device.method_listener(self.debug_enabler, c.binding('debug_enabler'))
 
@@ -69,9 +69,6 @@ class DroneBinding(Logging):
         self.default_profile = 'Default'
         self.profiles = []
         self.profile_idx = 0
-        self.profile_loading = False
-        self.geofence_loading = False
-        self.doing_flat_trim = False
 
         self.load_profiles()
         self.get_default_profile()
@@ -248,43 +245,28 @@ class DroneBinding(Logging):
 
         self.voice.pronounce('Executing flat trim.')
 
-        if args and not self.doing_flat_trim:
-            self.doing_flat_trim = True
+        if args:
             self.bebop.flat_trim(2)
-
-        elif not args and self.doing_flat_trim:
-            self.doing_flat_trim = False
 
     def change_profile(self, args):
         if not self.debug:
             return
 
-        if args and not self.profile_loading:
-            self.profile_loading = True
-
+        if args:
             self.profile_idx = (self.profile_idx + 1) % len(self.profiles)
             profile = self.load_profile(self.profile_idx)
 
             self.voice.pronounce(f'Changeing to profile {profile}')
 
-        elif not args and self.profile_loading:
-            self.profile_loading = False
-
-        return
-
     def change_geofence(self, args):
         if not self.debug:
             return
 
-        if args and not self.geofence_loading:
-            self.geofence_loading = True
-
+        if args:
             fence = self.bebop.toggle_fence()
             status = 'on' if fence else 'off'
 
             self.voice.pronounce(f'Drone geofenceing has now been turned {status}')
-        elif not args and self.geofence_loading:
-            self.geofence_loading = False
 
     def abort(self):
         self.voice.pronounce('The emergency protocol has been initiated.')
