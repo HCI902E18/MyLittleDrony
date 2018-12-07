@@ -134,8 +134,6 @@ class DroneBinding(Logging):
 
         while self.running:
             try:
-                start_time = time.time()
-
                 if self.bebop.is_flying():
                     if self._movement_vector.compare(null_vector):
                         if not stopped:
