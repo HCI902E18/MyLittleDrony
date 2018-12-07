@@ -11,7 +11,6 @@ from logging import getLogger
 from threading import Thread
 
 from inputz import Devices
-from inputz.decorators.button import button
 from inputz.exceptions.ControllerNotFound import ControllerNotFound
 
 from Config import c
@@ -58,9 +57,9 @@ class DroneBinding(Logging):
         self.device.method_listener(self.yaw, c.binding('yaw'))
         self.device.method_listener(self.altitude, c.binding('altitude_modifier'))
 
-        self.device.method_listener(self.change_profile, c.binding('profile_change'))
-        self.device.method_listener(self.change_geofence, c.binding('change_geofence'))
-        self.device.method_listener(self.do_flat_trim, c.binding('do_flat_trim'))
+        self.device.method_listener(self.change_profile, c.binding('profile_change'), self.device.Handler.single)
+        self.device.method_listener(self.change_geofence, c.binding('change_geofence'), self.device.Handler.single)
+        self.device.method_listener(self.do_flat_trim, c.binding('do_flat_trim'), self.device.Handler.single)
 
         self.device.method_listener(self.debug_enabler, c.binding('debug_enabler'))
 
@@ -232,7 +231,6 @@ class DroneBinding(Logging):
         else:
             self._movement_vector.set_yaw(args[0])
 
-    # @button
     def do_flat_trim(self, args):
         if not self.debug:
             return
@@ -242,7 +240,6 @@ class DroneBinding(Logging):
         if args:
             self.bebop.flat_trim(2)
 
-    # @button
     def change_profile(self, args):
         if not self.debug:
             return
@@ -255,7 +252,6 @@ class DroneBinding(Logging):
 
             self.voice.pronounce(f'Changeing to profile {profile}')
 
-    # @button
     def change_geofence(self, args):
         if not self.debug:
             return
