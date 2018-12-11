@@ -131,19 +131,14 @@ class DroneBinding(Logging):
 
     def tick(self):
         null_vector = Vector()
-        stopped = True
 
         while self.running:
             try:
                 if self.bebop.is_flying():
-                    if self._movement_vector.compare(null_vector):
-                        if not stopped:
-                            self.bebop.fly(null_vector)
-                            stopped = True
-                    else:
+                    if not self._movement_vector.compare(null_vector):
                         self.bebop.fly(self._movement_vector)
-                        stopped = False
-
+                else:
+                    self.bebop.ask_for_state_update()
                 self.bebop.smart_sleep(self._tick_rate)
             except Exception as e:
                 folder = 'crashes/'
