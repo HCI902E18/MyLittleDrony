@@ -3,10 +3,6 @@ import json
 import logging
 import os
 import sys as system
-import time
-import traceback
-import uuid
-from datetime import datetime
 from logging import getLogger
 from threading import Thread
 
@@ -16,7 +12,7 @@ from inputz.exceptions.ControllerNotFound import ControllerNotFound
 from Config import c
 from Voice import Voice
 from bebop import Bebop, Vector
-from log import LogUtils, Logging
+from log import Logging
 
 
 class DroneBinding(Logging):
@@ -25,16 +21,8 @@ class DroneBinding(Logging):
 
         # Dronen skal være en tråd, så de ikke hænger i beregninger til reporter
         self.bebop = Bebop()
-        self.bebop.set_user_sensor_callback(self.logging, ())
-        self.logging_time = 0
-
-        self.log_time = datetime.now()
-        self.logs = []
-        self.log_interval = 0.5
 
         self.yaw_altitude_damper = 0.30
-
-        self.last_sate = None
 
         self._tick_rate = 0.1
         self._movement_vector = Vector()
@@ -112,23 +100,6 @@ class DroneBinding(Logging):
         self._movement_vector.set_modifier(self.bebop.max_modifier)
         return profile.get('name')
 
-    def logging(self, _):
-        self.bebop.update_state()
-
-        if self.last_sate != self.bebop.state:
-            self.log.debug(f"State update: {self.bebop.state}")
-            self.last_sate = self.bebop.state
-
-        if time.time() - self.logging_time < self.log_interval:
-            return
-
-        self.logging_time = time.time()
-
-        lu = LogUtils()
-        self.logs.append(lu.parse_sensors(self.bebop.sensors.sensors_dict))
-
-        self.write_log()
-
     def tick(self):
         null_vector = Vector()
 
@@ -141,24 +112,7 @@ class DroneBinding(Logging):
                     self.bebop.ask_for_state_update()
                 self.bebop.smart_sleep(self._tick_rate)
             except Exception as e:
-                folder = 'crashes/'
-                file = f'{uuid.uuid4().hex}.txt'
-                os.makedirs(folder, exist_ok=True)
-
-                with open(f'{folder}/{file}', 'w') as f:
-                    f.write(f'{str(e)}\n')
-                    f.write(traceback.format_exc() + '\n')
-
-    def write_log(self):
-        try:
-            log_date_format = self.log_time.strftime('[%d-%m-%Y][%H.%M.%S]')
-
-            os.makedirs(f'logs/{log_date_format}', exist_ok=True)
-
-            with open(f'logs/{log_date_format}/flight_log.json', 'w') as f:
-                f.write(json.dumps(self.logs, indent=4))
-        except Exception:
-            pass
+                pass
 
     def start(self):
         try:

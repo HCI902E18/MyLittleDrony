@@ -2,6 +2,7 @@ import enum
 
 from pyparrot.Bebop import Bebop as BaseBebop
 
+from bebop.FlightLog import FlightLog
 from log.Logging import Logging
 from .WifiConnection import WifiConnection
 
@@ -16,6 +17,12 @@ class Bebop(BaseBebop, Logging):
         self.state = self.DroneStates.unknown
 
         self.drone_connection = WifiConnection(self, drone_type=self.drone_type)
+        self.drone_logging = FlightLog(self)
+
+        self.user_callback_function = self.update_state
+        self.user_callback_function_args = None
+
+        self.updated_user_callback_function = None
 
         self.max_modifier = 1
 
@@ -56,15 +63,20 @@ class Bebop(BaseBebop, Logging):
             return True
         return False
 
-    def update_state(self):
+    def update_state(self, _):
         self.state = self.DroneStates[self.sensors.flying_state]
+        self.drone_logging.update()
+
+        if self.updated_user_callback_function is not None and callable(self.updated_user_callback_function):
+            self.updated_user_callback_function()
+
         return True
 
     def is_flying(self):
         return self.state in [self.DroneStates.flying, self.DroneStates.hovering]
 
     def is_landed(self):
-        return self.state in [self.DroneStates.landed, self.DroneStates.landing]
+        return not self.is_flying()
 
     def fly(self, vector):
         command_tuple = self.command_parser.get_command_tuple("ardrone3", "Piloting", "PCMD")
@@ -75,3 +87,6 @@ class Bebop(BaseBebop, Logging):
         my_vertical = self._ensure_fly_command_in_range(vector.get('vertical_movement'))
 
         self.drone_connection.send_movement_command(command_tuple, my_roll, my_pitch, my_yaw, my_vertical)
+
+    def set_user_sensor_callback(self, function, _):
+        self.updated_user_callback_function = function
