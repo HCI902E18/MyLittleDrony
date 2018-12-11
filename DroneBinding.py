@@ -27,15 +27,14 @@ class DroneBinding(Logging):
         self._movement_vector = Vector()
 
         self.voice = Voice()
-        self.threads = [
-            Thread(name='Drone', target=self.tick, args=(())),
-            self.voice
-        ]
+        self.voice.start()
+
+        self.drone = Thread(name='Drone', target=self.tick, args=(()))
 
         try:
             self.device = Devices().get_device()
         except ControllerNotFound:
-            self.voice.pronounce('Unable to connect to controller.')
+            self.voice.force_pronounce('Unable to connect to controller.')
             exit(0)
 
         self.device.method_listener(self.take_off_landing, 'START')
@@ -104,12 +103,10 @@ class DroneBinding(Logging):
 
         while self.running:
             try:
-                if self.bebop.is_flying():
-                    if not self._movement_vector.compare(null_vector):
-                        self.bebop.fly(self._movement_vector)
-                else:
-                    self.bebop.ask_for_state_update()
+                if not self._movement_vector.compare(null_vector):
+                    self.bebop.fly(self._movement_vector)
                 self.bebop.smart_sleep(self._tick_rate)
+
             except Exception as e:
                 self.log.error("ERROR DURING FLIGHT")
                 self.log.error(str(e))
@@ -124,9 +121,6 @@ class DroneBinding(Logging):
                 self.device.start()
                 getLogger('XboxController').setLevel(logging.INFO)
                 getLogger('XboxEliteController').setLevel(logging.INFO)
-
-                for thread in self.threads:
-                    thread.start()
             else:
                 self.voice.force_pronounce("Could not connect to drone")
                 self.log.error("Could not connect to drone")
@@ -140,11 +134,17 @@ class DroneBinding(Logging):
         if args and self.bebop.is_landed():
             self.voice.pronounce('Take off sequence has been initiated.')
 
+            self.running = True
+            self.drone.start()
+
             self.bebop.safe_takeoff(5)
         elif args and self.bebop.is_flying():
             self.voice.pronounce('Landing sequence has been initiated.')
 
             self._movement_vector.reset()
+
+            self.running = False
+            self.drone.join()
 
             self.bebop.safe_land(5)
 
