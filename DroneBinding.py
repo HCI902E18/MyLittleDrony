@@ -27,7 +27,6 @@ class DroneBinding(Logging):
         self._movement_vector = Vector()
 
         self.voice = Voice()
-        self.voice.start()
 
         self.drone = None
 
@@ -123,6 +122,7 @@ class DroneBinding(Logging):
                 self.voice.force_pronounce("Successfully connected to the drone")
 
                 self.device.start()
+                self.voice.start()
                 getLogger('XboxController').setLevel(logging.INFO)
                 getLogger('XboxEliteController').setLevel(logging.INFO)
             else:
