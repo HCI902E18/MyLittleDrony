@@ -1,5 +1,5 @@
 from DroneBinding import DroneBinding
-from Voice import Voice
+from Droney.Voice import Voice
 
 v = Voice()
 v.speak("Starting Drone")

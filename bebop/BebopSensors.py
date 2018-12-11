@@ -5,6 +5,8 @@ from pyparrot.Bebop import BebopSensors as BaseBebopSensors
 
 class BebopSensors(BaseBebopSensors):
     def __init__(self, logger=None):
+        super().__init__()
+
         self.state = self.DroneStates.unknown
 
         self.logger = logger

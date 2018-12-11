@@ -9,7 +9,7 @@ from threading import Thread
 from inputz import Devices
 from inputz.exceptions.ControllerNotFound import ControllerNotFound
 
-from Voice import Voice
+from Droney.Voice import Voice
 from bebop import Bebop, Vector
 from log import Logging
 
@@ -29,7 +29,7 @@ class DroneBinding(Logging):
         self.voice = Voice()
         self.voice.start()
 
-        self.drone = Thread(name='Drone', target=self.tick, args=(()))
+        self.drone = None
 
         try:
             self.device = Devices().get_device()
@@ -66,7 +66,7 @@ class DroneBinding(Logging):
         self.debug_count = 0
         self.debug_button = False
 
-        # self.block_print()
+        self.block_print()
 
     @staticmethod
     def block_print():
@@ -113,6 +113,8 @@ class DroneBinding(Logging):
                 self.log.error("ERROR DURING FLIGHT")
                 self.log.error(str(e))
 
+        self.log.info("Killing tick thread")
+
     def start(self):
         try:
             if self.bebop.connect(5):
@@ -136,6 +138,7 @@ class DroneBinding(Logging):
         if args and self.bebop.is_landed():
             self.voice.pronounce('Take off sequence has been initiated.')
 
+            self.drone = self.get_flight_thread()
             self.running = True
             self.drone.start()
 
@@ -218,8 +221,10 @@ class DroneBinding(Logging):
 
         self.running = False
 
-        for thread in self.threads:
-            thread.join()
+        self.voice.join()
+
+        if self.drone is not None:
+            self.drone.join()
 
     def debug_enabler(self, args):
         if self.bebop.is_landed():
@@ -235,3 +240,6 @@ class DroneBinding(Logging):
                 self.debug_button = True
             if args == 0 and self.debug_button:
                 self.debug_button = False
+
+    def get_flight_thread(self):
+        return Thread(name='Drone', target=self.tick, args=(()))
