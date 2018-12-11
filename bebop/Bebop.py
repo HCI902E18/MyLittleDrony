@@ -17,8 +17,6 @@ class Bebop(BaseBebop, Logging):
         self.drone_logging = FlightLog(self)
         self.sensors = BebopSensors(self.drone_logging)
 
-        self.max_modifier = 1
-
     def set_setting(self, key, value):
         try:
             def func_not_found(val):
@@ -28,9 +26,6 @@ class Bebop(BaseBebop, Logging):
             setting(value)
         except AttributeError:
             self.log.error(f'Unable to set set_{key}')
-
-    def set_max_modifier(self, val):
-        self.max_modifier = val
 
     def toggle_fence(self):
         self.fence = not self.fence

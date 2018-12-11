@@ -12,8 +12,6 @@ class Vector(object):
 
         self.roll_damper = 0.75
 
-        self.modifier = 1
-
     @staticmethod
     def round(value):
         return int(round(value, 0))
@@ -36,10 +34,10 @@ class Vector(object):
 
     def emit(self):
         values = {
-            'roll': self.round((self._roll * self.max_roll) * self.roll_damper * self.modifier),
-            'pitch': self.round(self._pitch * self.max_pitch * self.modifier),
-            'yaw': self.round(self._yaw * self.max_yaw * self.modifier),
-            'vertical_movement': self.round(self._vertical_movement * self.max_vertical_movement * self.modifier)
+            'roll': self.round((self._roll * self.max_roll) * self.roll_damper),
+            'pitch': self.round(self._pitch * self.max_pitch),
+            'yaw': self.round(self._yaw * self.max_yaw),
+            'vertical_movement': self.round(self._vertical_movement * self.max_vertical_movement)
         }
 
         return values
@@ -66,6 +64,3 @@ class Vector(object):
             return self.emit().get(key)
         except KeyError:
             return 0
-
-    def set_modifier(self, max_modifier):
-        self.modifier = max_modifier

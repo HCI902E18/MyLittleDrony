@@ -45,11 +45,12 @@ class DroneBinding(Logging):
         self.device.method_listener(self.yaw, 'RIGHT_STICK')
         self.device.method_listener(self.altitude, 'RIGHT_STICK')
 
-        self.device.method_listener(self.debug_enabler, 'LEFT_TRIGGER')
+        self.device.method_listener(self.left_trigger, 'LEFT_TRIGGER')
+        self.device.method_listener(self.right_trigger, 'RIGHT_TRIGGER')
 
         self.device.method_listener(self.change_profile, 'SELECT', self.device.Handler.single)
-        self.device.method_listener(self.do_flat_trim, 'LEFT_BUMPER', self.device.Handler.single)
-        self.device.method_listener(self.change_geofence, 'RIGHT_TRIGGER', self.device.Handler.single)
+        self.device.method_listener(self.do_flat_trim, 'A', self.device.Handler.single)
+        self.device.method_listener(self.change_geofence, 'Y', self.device.Handler.single)
 
         self.device.abort_function(self.abort)
 
@@ -95,7 +96,6 @@ class DroneBinding(Logging):
             if k[0:3] == 'max':
                 self.bebop.set_setting(k, v)
 
-        self._movement_vector.set_modifier(self.bebop.max_modifier)
         return profile.get('name')
 
     def tick(self):
@@ -182,19 +182,12 @@ class DroneBinding(Logging):
             self._movement_vector.set_yaw(args[0])
 
     def do_flat_trim(self, args):
-        if not self.debug:
-            return
-
-        self.voice.pronounce('Executing flat trim.')
-
-        if args:
+        if args and self.bebop.is_landed():
+            self.voice.pronounce('Executing flat trim.')
             self.bebop.flat_trim(2)
 
     def change_profile(self, args):
-        if not self.debug:
-            return
-
-        if args:
+        if args and self.bebop.is_landed():
             self.voice.pronounce(f'Loading new profile')
 
             self.profile_idx = (self.profile_idx + 1) % len(self.profiles)
@@ -203,9 +196,6 @@ class DroneBinding(Logging):
             self.voice.pronounce(f'Changeing to profile {profile}')
 
     def change_geofence(self, args):
-        if not self.debug:
-            return
-
         if args:
             fence = self.bebop.toggle_fence()
             status = 'on' if fence else 'off'
@@ -226,20 +216,13 @@ class DroneBinding(Logging):
         if self.drone is not None:
             self.drone.join()
 
-    def debug_enabler(self, args):
-        if self.bebop.is_landed():
-            if args == 1 and not self.debug_button:
-                if self.debug_count == 2:
-                    self.debug_count = 0
-                    self.debug = not self.debug
-
-                    state = 'enabled' if self.debug else 'disabled'
-                    self.voice.pronounce(f"Debugging has been {state}")
-                else:
-                    self.debug_count += 1
-                self.debug_button = True
-            if args == 0 and self.debug_button:
-                self.debug_button = False
-
     def get_flight_thread(self):
         return Thread(name='Drone', target=self.tick, args=(()))
+
+    def left_trigger(self, args):
+        if args:
+            self._movement_vector.set_yaw(-1)
+
+    def right_trigger(self, args):
+        if args:
+            self._movement_vector.set_yaw(1)
