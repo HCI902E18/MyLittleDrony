@@ -58,7 +58,7 @@ class DroneBinding(Logging):
         self.profile_idx = 0
 
         self.load_profiles()
-        self.get_default_profile()
+        self.profile_idx = self.get_default_profile()
 
         self.running = True
 
@@ -84,10 +84,8 @@ class DroneBinding(Logging):
     def get_default_profile(self):
         for idx, p in enumerate(self.profiles):
             if p.get('name') == self.default_profile:
-                self.profile_idx = idx
-                return
-        self.profile_idx = 0
-        return
+                return idx
+        return 0
 
     def load_profile(self, idx):
         profile = self.profiles[idx]
@@ -125,8 +123,6 @@ class DroneBinding(Logging):
                 getLogger('XboxController').setLevel(logging.INFO)
                 getLogger('XboxEliteController').setLevel(logging.INFO)
 
-                # self.load_profile(self.profile_idx)
-
                 for thread in self.threads:
                     thread.start()
             else:
@@ -149,8 +145,6 @@ class DroneBinding(Logging):
             self._movement_vector.reset()
 
             self.bebop.safe_land(5)
-            self.bebop.smart_sleep(2)
-            self.bebop.ask_for_state_update()
 
     def pitch(self, args):
         self._movement_vector.set_pitch(args[1])
