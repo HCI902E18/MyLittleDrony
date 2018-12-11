@@ -129,7 +129,7 @@ class DroneBinding(Logging):
 
         while self.running:
             try:
-                self.log.info('is flying:' + str(self.bebop.is_flying()))
+                # self.log.info('is flying:' + str(self.bebop.is_flying()))
                 if self.bebop.is_flying():
                     if not self._movement_vector.compare(null_vector):
                         self.bebop.fly_direct(**self._movement_vector.emit(modifier=self.bebop.max_modifier))
