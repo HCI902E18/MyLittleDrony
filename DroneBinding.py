@@ -9,7 +9,6 @@ from threading import Thread
 from inputz import Devices
 from inputz.exceptions.ControllerNotFound import ControllerNotFound
 
-from Config import c
 from Voice import Voice
 from bebop import Bebop, Vector
 from log import Logging
@@ -39,17 +38,19 @@ class DroneBinding(Logging):
             self.voice.pronounce('Unable to connect to controller.')
             exit(0)
 
-        self.device.method_listener(self.take_off_landing, c.binding('takeoff_landing'))
-        self.device.method_listener(self.pitch, c.binding('pitch'))
-        self.device.method_listener(self.roll, c.binding('roll'))
-        self.device.method_listener(self.yaw, c.binding('yaw'))
-        self.device.method_listener(self.altitude, c.binding('altitude_modifier'))
+        self.device.method_listener(self.take_off_landing, 'START')
 
-        self.device.method_listener(self.change_profile, c.binding('profile_change'), self.device.Handler.single)
-        self.device.method_listener(self.change_geofence, c.binding('change_geofence'), self.device.Handler.single)
-        self.device.method_listener(self.do_flat_trim, c.binding('do_flat_trim'), self.device.Handler.single)
+        self.device.method_listener(self.pitch, 'LEFT_STICK')
+        self.device.method_listener(self.roll, 'LEFT_STICK')
 
-        self.device.method_listener(self.debug_enabler, c.binding('debug_enabler'))
+        self.device.method_listener(self.yaw, 'RIGHT_STICK')
+        self.device.method_listener(self.altitude, 'RIGHT_STICK')
+
+        self.device.method_listener(self.debug_enabler, 'LEFT_TRIGGER')
+
+        self.device.method_listener(self.change_profile, 'SELECT', self.device.Handler.single)
+        self.device.method_listener(self.do_flat_trim, 'LEFT_BUMPER', self.device.Handler.single)
+        self.device.method_listener(self.change_geofence, 'RIGHT_TRIGGER', self.device.Handler.single)
 
         self.device.abort_function(self.abort)
 
@@ -111,6 +112,7 @@ class DroneBinding(Logging):
                 self.bebop.smart_sleep(self._tick_rate)
             except Exception as e:
                 self.log.error("ERROR DURING FLIGHT")
+                self.log.error(str(e))
 
     def start(self):
         try:

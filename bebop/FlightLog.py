@@ -8,7 +8,6 @@ from bebop.LogUtils import LogUtils
 
 class FlightLog(object):
     def __init__(self, bebop):
-        self.last_sate = None
         self.log_interval = 0.5
         self.logging_time = 0
 
@@ -20,10 +19,6 @@ class FlightLog(object):
         self.lu = LogUtils()
 
     def update(self):
-
-        if self.last_sate != self.bebop.state:
-            self.last_sate = self.bebop.state
-
         if time.time() - self.logging_time < self.log_interval:
             return
 
