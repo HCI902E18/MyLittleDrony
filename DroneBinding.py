@@ -99,6 +99,8 @@ class DroneBinding(Logging):
         return profile.get('name')
 
     def tick(self):
+        self.log.info("Starting tick thread")
+
         null_vector = Vector()
 
         while self.running:
