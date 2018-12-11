@@ -1,9 +1,8 @@
-import enum
-
 from pyparrot.Bebop import Bebop as BaseBebop
 
-from bebop.FlightLog import FlightLog
 from log.Logging import Logging
+from .BebopSensors import BebopSensors
+from .FlightLog import FlightLog
 from .WifiConnection import WifiConnection
 
 
@@ -14,34 +13,16 @@ class Bebop(BaseBebop, Logging):
 
         self.fence = False
 
-        self.state = self.DroneStates.unknown
-
         self.drone_connection = WifiConnection(self, drone_type=self.drone_type)
         self.drone_logging = FlightLog(self)
-
-        self.user_callback_function = self.update_state
-        self.user_callback_function_args = None
-
-        self.updated_user_callback_function = None
+        self.sensors = BebopSensors(self.drone_logging)
 
         self.max_modifier = 1
-
-    class DroneStates(enum.Enum):
-        unknown = 'unknown'
-        landed = 'landed'
-        takingoff = 'takingoff'
-        hovering = 'hovering'
-        flying = 'flying'
-        landing = 'landing'
-        emergency = 'emergency'
-        usertakeoff = 'usertakeoff'
-        motor_ramping = 'motor_ramping'
-        emergency_landing = 'emergency_landing'
 
     def set_setting(self, key, value):
         try:
             def func_not_found(val):
-                pass
+                self.log.error(f"Unable to set value: {val}")
 
             setting = getattr(self, f'set_{key}', func_not_found)
             setting(value)
@@ -63,17 +44,8 @@ class Bebop(BaseBebop, Logging):
             return True
         return False
 
-    def update_state(self, _):
-        self.state = self.DroneStates[self.sensors.flying_state]
-        self.drone_logging.update()
-
-        if self.updated_user_callback_function is not None and callable(self.updated_user_callback_function):
-            self.updated_user_callback_function()
-
-        return True
-
     def is_flying(self):
-        return self.state in [self.DroneStates.flying, self.DroneStates.hovering]
+        return self.sensors.is_flying()
 
     def is_landed(self):
         return not self.is_flying()
@@ -87,6 +59,3 @@ class Bebop(BaseBebop, Logging):
         my_vertical = self._ensure_fly_command_in_range(vector.get('vertical_movement'))
 
         self.drone_connection.send_movement_command(command_tuple, my_roll, my_pitch, my_yaw, my_vertical)
-
-    def set_user_sensor_callback(self, function, _):
-        self.updated_user_callback_function = function
