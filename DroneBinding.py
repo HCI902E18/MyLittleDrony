@@ -112,7 +112,7 @@ class DroneBinding(Logging):
                     self.bebop.ask_for_state_update()
                 self.bebop.smart_sleep(self._tick_rate)
             except Exception as e:
-                pass
+                self.log.error("ERROR DURING FLIGHT")
 
     def start(self):
         try:
