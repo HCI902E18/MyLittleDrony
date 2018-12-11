@@ -34,7 +34,7 @@ class Bebop(BaseBebop, Logging):
     def set_setting(self, key, value):
         try:
             def func_not_found(val):
-                pass
+                self.log.error(f"HMM COULD NOT SET {val}")
 
             setting = getattr(self, f'set_{key}', func_not_found)
             setting(value)
@@ -64,4 +64,5 @@ class Bebop(BaseBebop, Logging):
         return self.state in [self.DroneStates.flying, self.DroneStates.hovering]
 
     def is_landed(self):
+        return not self.is_flying()
         return self.state in [self.DroneStates.landed, self.DroneStates.landing]
