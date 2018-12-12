@@ -204,7 +204,11 @@ class DroneBinding(Logging):
     def left_trigger(self, args):
         if args:
             self._movement_vector.set_yaw(-1)
+        else:
+            self._movement_vector.set_yaw(0)
 
     def right_trigger(self, args):
         if args:
             self._movement_vector.set_yaw(1)
+        else:
+            self._movement_vector.set_yaw(0)

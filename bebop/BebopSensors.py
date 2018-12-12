@@ -26,7 +26,8 @@ class BebopSensors(BaseBebopSensors):
     def update(self, sensor_name, sensor_value, sensor_enum):
         super().update(sensor_name, sensor_value, sensor_enum)
 
-        self.state = self.DroneStates[self.flying_state]
+        if sensor_name == "FlyingStateChanged_state":
+            self.state = self.DroneStates[self.flying_state]
 
         if self.logger is not None:
             self.logger.update()
