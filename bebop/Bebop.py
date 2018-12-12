@@ -40,10 +40,9 @@ class Bebop(BaseBebop, Logging):
         return False
 
     def is_flying(self):
-        return self.sensors.is_flying()
-
-    def is_landed(self):
-        return not self.is_flying()
+        return not self.is_landed()
+        # return self.sensors.is_landed()
+        # return self.sensors.is_flying()
 
     def fly(self, vector):
         command_tuple = self.command_parser.get_command_tuple("ardrone3", "Piloting", "PCMD")
@@ -54,3 +53,14 @@ class Bebop(BaseBebop, Logging):
         my_vertical = self._ensure_fly_command_in_range(vector.get('vertical_movement'))
 
         self.drone_connection.send_movement_command(command_tuple, my_roll, my_pitch, my_yaw, my_vertical)
+
+    @property
+    def states(self):
+        return self.sensors.DroneStates
+
+    def force_state_update(self, state):
+        if state in self.states:
+            self.log.info(f"Forcing fly state as: {state.value}")
+            self.sensors.update('FlyingStateChanged_state', state.value, None)
+
+        return

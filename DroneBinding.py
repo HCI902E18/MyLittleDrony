@@ -138,6 +138,7 @@ class DroneBinding(Logging):
             self.flight.kill()
 
             self.bebop.safe_land(5)
+            # self.bebop.force_state_update(self.bebop.states.landed)
 
     def pitch(self, args):
         self._movement_vector.set_pitch(args[1])
