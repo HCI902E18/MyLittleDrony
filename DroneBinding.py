@@ -4,11 +4,11 @@ import logging
 import os
 import sys as system
 from logging import getLogger
-from threading import Thread
 
 from inputz import Devices
 from inputz.exceptions.ControllerNotFound import ControllerNotFound
 
+from Droney.Flight import Flight
 from Droney.Voice import Voice
 from bebop import Bebop, Vector
 from log import Logging
@@ -23,12 +23,15 @@ class DroneBinding(Logging):
 
         self.yaw_altitude_damper = 0.30
 
-        self._tick_rate = 0.1
         self._movement_vector = Vector()
 
         self.voice = Voice()
+        self.flight = Flight(self.bebop)
 
-        self.drone = None
+        self.threads = [
+            self.voice,
+            self.flight
+        ]
 
         try:
             self.device = Devices().get_device()
@@ -97,23 +100,6 @@ class DroneBinding(Logging):
 
         return profile.get('name')
 
-    def tick(self):
-        self.log.info("Starting tick thread")
-
-        null_vector = Vector()
-
-        while self.running:
-            try:
-                if not self._movement_vector.compare(null_vector):
-                    self.bebop.fly(self._movement_vector)
-                self.bebop.smart_sleep(self._tick_rate)
-
-            except Exception as e:
-                self.log.error("ERROR DURING FLIGHT")
-                self.log.error(str(e))
-
-        self.log.info("Killing tick thread")
-
     def start(self):
         try:
             if self.bebop.connect(5):
@@ -122,7 +108,10 @@ class DroneBinding(Logging):
                 self.voice.force_pronounce("Successfully connected to the drone")
 
                 self.device.start()
-                self.voice.start()
+
+                for thread in self.threads:
+                    thread.start()
+
                 getLogger('XboxController').setLevel(logging.INFO)
                 getLogger('XboxEliteController').setLevel(logging.INFO)
             else:
@@ -138,9 +127,7 @@ class DroneBinding(Logging):
         if args and self.bebop.is_landed():
             self.voice.pronounce('Take off sequence has been initiated.')
 
-            self.drone = self.get_flight_thread()
-            self.running = True
-            self.drone.start()
+            self.flight.fly(self.bebop, self._movement_vector)
 
             self.bebop.safe_takeoff(5)
         elif args and self.bebop.is_flying():
@@ -148,8 +135,7 @@ class DroneBinding(Logging):
 
             self._movement_vector.reset()
 
-            self.running = False
-            self.drone.join()
+            self.flight.kill()
 
             self.bebop.safe_land(5)
 
@@ -209,15 +195,10 @@ class DroneBinding(Logging):
         self.bebop.emergency_land()
         self.bebop.disconnect()
 
-        self.running = False
+        self.flight.kill()
 
-        self.voice.join()
-
-        if self.drone is not None:
-            self.drone.join()
-
-    def get_flight_thread(self):
-        return Thread(name='Drone', target=self.tick, args=(()))
+        for thread in self.threads:
+            thread.join()
 
     def left_trigger(self, args):
         if args:
