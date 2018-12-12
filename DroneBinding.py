@@ -130,12 +130,13 @@ class DroneBinding(Logging):
             self.flight.fly(self.bebop, self._movement_vector)
 
             self.bebop.safe_takeoff(5)
+
         elif args and self.bebop.is_flying():
             self.voice.pronounce('Landing sequence has been initiated.')
 
             self._movement_vector.reset()
 
-            self.flight.kill()
+            self.flight.join()
 
             self.bebop.safe_land(5)
             # self.bebop.force_state_update(self.bebop.states.landed)
@@ -195,8 +196,6 @@ class DroneBinding(Logging):
 
         self.bebop.emergency_land()
         self.bebop.disconnect()
-
-        self.flight.kill()
 
         for thread in self.threads:
             thread.join()
