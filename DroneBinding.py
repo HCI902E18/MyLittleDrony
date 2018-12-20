@@ -47,8 +47,8 @@ class DroneBinding(Logging):
         self.device.method_listener(self.yaw, 'RIGHT_STICK')
         self.device.method_listener(self.altitude, 'RIGHT_STICK')
 
-        self.device.method_listener(self.left_trigger, 'LEFT_TRIGGER')
-        self.device.method_listener(self.right_trigger, 'RIGHT_TRIGGER')
+        self.device.method_listener(self.left_bumper, 'LEFT_BUMPER')
+        self.device.method_listener(self.right_bumper, 'RIGHT_BUMPER')
 
         self.device.method_listener(self.change_profile, 'SELECT', self.device.Handler.single)
         self.device.method_listener(self.do_flat_trim, 'A', self.device.Handler.single)
@@ -200,13 +200,13 @@ class DroneBinding(Logging):
         for thread in self.threads:
             thread.join()
 
-    def left_trigger(self, args):
+    def left_bumper(self, args):
         if args:
             self._movement_vector.set_yaw(-1)
         else:
             self._movement_vector.set_yaw(0)
 
-    def right_trigger(self, args):
+    def right_bumper(self, args):
         if args:
             self._movement_vector.set_yaw(1)
         else:
