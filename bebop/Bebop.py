@@ -1,8 +1,8 @@
-import enum
-
 from pyparrot.Bebop import Bebop as BaseBebop
 
 from log.Logging import Logging
+from .BebopSensors import BebopSensors
+from .FlightLog import FlightLog
 from .WifiConnection import WifiConnection
 
 
@@ -13,28 +13,14 @@ class Bebop(BaseBebop, Logging):
 
         self.fence = False
 
-        self.state = self.DroneStates.unknown
-
-        self.blacklisted_movements = ['yaw', 'vertical_movement']
-
         self.drone_connection = WifiConnection(self, drone_type=self.drone_type)
-
-    class DroneStates(enum.Enum):
-        unknown = 'unknown'
-        landed = 'landed'
-        takingoff = 'takingoff'
-        hovering = 'hovering'
-        flying = 'flying'
-        landing = 'landing'
-        emergency = 'emergency'
-        usertakeoff = 'usertakeoff'
-        motor_ramping = 'motor_ramping'
-        emergency_landing = 'emergency_landing'
+        self.drone_logging = FlightLog(self)
+        self.sensors = BebopSensors(self.drone_logging)
 
     def set_setting(self, key, value):
         try:
             def func_not_found(val):
-                pass
+                self.log.error(f"Unable to set value: {val}")
 
             setting = getattr(self, f'set_{key}', func_not_found)
             setting(value)
@@ -53,12 +39,28 @@ class Bebop(BaseBebop, Logging):
             return True
         return False
 
-    def update_state(self):
-        self.state = self.DroneStates[self.sensors.flying_state]
-        return True
-
     def is_flying(self):
-        return self.state in [self.DroneStates.flying, self.DroneStates.hovering]
+        return not self.is_landed()
+        # return self.sensors.is_landed()
+        # return self.sensors.is_flying()
 
-    def is_landed(self):
-        return self.state in [self.DroneStates.landed, self.DroneStates.landing]
+    def fly(self, vector):
+        command_tuple = self.command_parser.get_command_tuple("ardrone3", "Piloting", "PCMD")
+
+        my_roll = self._ensure_fly_command_in_range(vector.get('roll'))
+        my_pitch = self._ensure_fly_command_in_range(vector.get('pitch'))
+        my_yaw = self._ensure_fly_command_in_range(vector.get('yaw'))
+        my_vertical = self._ensure_fly_command_in_range(vector.get('vertical_movement'))
+
+        self.drone_connection.send_movement_command(command_tuple, my_roll, my_pitch, my_yaw, my_vertical)
+
+    @property
+    def states(self):
+        return self.sensors.DroneStates
+
+    def force_state_update(self, state):
+        if state in self.states:
+            self.log.info(f"Forcing fly state as: {state.value}")
+            self.sensors.update('FlyingStateChanged_state', state.value, None)
+
+        return

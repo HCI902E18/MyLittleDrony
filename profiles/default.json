@@ -2,9 +2,9 @@
   "name": "Default",
 
   "max_altitude": 3,
-  "max_distance": 200,
-  "max_tilt": 10,
-  "max_tilt_rotation_speed": 100,
+  "max_distance": 75,
+  "max_tilt": 15,
+  "max_tilt_rotation_speed": 150,
   "max_vertical_speed": 1.5,
-  "max_rotation_speed": 40
+  "max_rotation_speed": 80
 }

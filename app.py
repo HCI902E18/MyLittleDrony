@@ -1,8 +1,8 @@
 from DroneBinding import DroneBinding
-from Voice import Voice
+from Droney.Voice import Voice
 
 v = Voice()
-v.speak("Starting Drone")
+v.force_pronounce("Starting Drone")
 drone = DroneBinding()
 
 if __name__ == '__main__':
