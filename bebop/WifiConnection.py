@@ -16,7 +16,7 @@ class WifiConnection(BaseWifiConnection, Logging):
         self.timeout_max = 2
         self.reconnect_sleep = 5
 
-        self.name = "MyLittleDroney"
+        self.name = "pyFlight"
 
     def _listen_socket(self):
         data = None
