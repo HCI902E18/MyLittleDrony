@@ -50,9 +50,12 @@ class DroneBinding(Logging):
         self.device.method_listener(self.left_bumper, 'LEFT_BUMPER')
         self.device.method_listener(self.right_bumper, 'RIGHT_BUMPER')
 
-        self.device.method_listener(self.change_profile, 'SELECT', self.device.Handler.single)
+        # self.device.method_listener(self.change_profile, 'SELECT', self.device.Handler.single)
+        self.device.method_listener(self.discrete_continuous, 'SELECT', self.device.Handler.single)
         self.device.method_listener(self.do_flat_trim, 'A', self.device.Handler.single)
         self.device.method_listener(self.change_geofence, 'Y', self.device.Handler.single)
+
+        self.discrete = False
 
         self.device.abort_function(self.abort)
 
@@ -142,10 +145,19 @@ class DroneBinding(Logging):
             # self.bebop.force_state_update(self.bebop.states.landed)
 
     def pitch(self, args):
-        self._movement_vector.set_pitch(args[1])
+        self._movement_vector.set_pitch(self.discrete_converter(args[1]))
 
     def roll(self, args):
-        self._movement_vector.set_roll(args[0])
+        self._movement_vector.set_roll(self.discrete_converter(args[0]))
+
+    def discrete_converter(self, val):
+        if not self.discrete:
+            return val
+        if val < 0:
+            return -1
+        elif val > 0:
+            return 1
+        return 0
 
     @property
     def yaw_altitude_damper_converter(self):
@@ -158,7 +170,7 @@ class DroneBinding(Logging):
         if yaw > altitude * self.yaw_altitude_damper_converter:
             self._movement_vector.set_vertical_movement(0)
         else:
-            self._movement_vector.set_vertical_movement(args[1])
+            self._movement_vector.set_vertical_movement(self.discrete_converter(args[1]))
 
     def yaw(self, args):
         yaw = abs(args[0])
@@ -167,7 +179,7 @@ class DroneBinding(Logging):
         if altitude > yaw * self.yaw_altitude_damper_converter:
             self._movement_vector.set_yaw(0)
         else:
-            self._movement_vector.set_yaw(args[0])
+            self._movement_vector.set_yaw(self.discrete_converter(args[0]))
 
     def do_flat_trim(self, args):
         if args and self.bebop.is_landed():
@@ -182,6 +194,10 @@ class DroneBinding(Logging):
             profile = self.load_profile(self.profile_idx)
 
             self.voice.pronounce(f'Changeing to profile {profile}')
+
+    def discrete_continuous(self, args):
+        if args:
+            self.discrete = not self.discrete
 
     def change_geofence(self, args):
         if args:
