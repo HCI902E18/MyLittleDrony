@@ -39,7 +39,7 @@ class DroneBinding(Logging):
             self.voice.force_pronounce('Unable to connect to controller.')
             exit(0)
 
-        self.device.method_listener(self.take_off_landing, 'START')
+        self.device.method_listener(self.take_off_landing, 'START', self.device.Handler.single)
 
         self.device.method_listener(self.pitch, 'LEFT_STICK')
         self.device.method_listener(self.roll, 'LEFT_STICK')
@@ -153,9 +153,9 @@ class DroneBinding(Logging):
     def discrete_converter(self, val):
         if not self.discrete:
             return val
-        if val < 0:
+        if val < -0.25:
             return -1
-        elif val > 0:
+        elif val > 0.25:
             return 1
         return 0
 
@@ -198,6 +198,9 @@ class DroneBinding(Logging):
     def discrete_continuous(self, args):
         if args:
             self.discrete = not self.discrete
+
+            status = 'discrete' if self.discrete else 'continuous'
+            self.voice.pronounce(f'Changing to {status} setting')
 
     def change_geofence(self, args):
         if args:
